@@ -1,0 +1,141 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library("here")
+library("dplyr")
+library("ggplot2")
+library("purrr")
+library("tidyr")
+library("patchwork")
+
+
+# source(here("R", "thresholds.R"))
+# https://data-se.netlify.app/2018/12/05/plot-many-ggplot-diagrams-using-nest-and-map/
+
+# Read in trade data
+ffd <- read.csv(here("data", "raw", "ffd2.csv"),
+                col.names = c("year", "month", "flow", "product", "value", "tonnes"))
+
+# Create thresholds
+trade <- ffd %>% 
+  mutate(date = as.Date(paste(year, month, "1", sep = "-"), format = "%Y-%m-%d")) %>% 
+  group_by(product, flow) %>% 
+  mutate(diff = value - lag(value),
+         limupper = quantile(diff, 0.75, na.rm = TRUE) + (quantile(diff, 0.75, na.rm = TRUE) - quantile(diff, 0.25, na.rm = TRUE)) * 1.5,
+         limupperub = limupper * 1.05,
+         limupperlb = limupper * 0.95,
+         limlower = quantile(diff, 0.25, na.rm = TRUE) - (quantile(diff, 0.75, na.rm = TRUE) - quantile(diff, 0.25, na.rm = TRUE)) * 1.5,
+         limlowerub = limlower * 1.05,
+         limlowerlb = limlower * 0.95)
+
+# Nested for charting
+trade_nest <- trade %>% 
+              ungroup() %>% 
+              # filter(flow == "Total Exports") %>%
+              group_by(flow, product) %>%
+              nest()
+
+
+
+```
+
+```{r functions}
+
+threshold_plot <- function(data, title, subtitle){
+  data %>% 
+    ggplot() +
+    geom_line(aes(x = date, y = diff), colour = "blue") +
+    geom_point(aes(x = date, y = diff), colour = "blue") +
+    geom_line(aes(x = date, y = limupper), colour = "red", size = 3, alpha = 0.25) +
+    geom_line(aes(x = date, y = limlower), colour = "red", size = 3, alpha = 0.25) +
+    scale_x_date(date_breaks = "1 year", date_labels = "%Y") +
+    labs(title = title,
+         subtitle = subtitle) +
+    theme_minimal() +
+    theme(panel.grid.minor = element_blank())
+    # facet_wrap(~ product, scales = "free")
+  
+}
+
+
+value_plot <- function(data, title, subtitle){
+  data %>% 
+    ggplot() +
+    geom_line(aes(x = date, y = value), colour = "blue") +
+    geom_point(aes(x = date, y = value), colour = "blue") +
+    scale_x_date(date_breaks = "1 year", date_labels = "%Y") +
+    labs(title = title,
+         subtitle = subtitle) +
+    theme_minimal() +
+    theme(panel.grid.minor = element_blank())
+    # facet_wrap(~ product, scales = "free")
+  
+}
+
+plot_list <- function(cht1, cht2, title, subtitle){
+  (cht1 / cht2) +
+    plot_annotation(title = title,
+                    subtitle = subtitle)
+  
+}
+
+```
+
+## UK Trade data
+
+### Imports
+
+```{r}
+
+# trade_group %>% 
+#   filter(flow == "Total Exports", product == "Cheese") %>%
+#   ggplot() +
+#   geom_line(aes(x = date, y = diff)) +
+#   geom_line(aes(x = date, y = limupper), colour = "red") +
+#   geom_line(aes(x = date, y = limlower), colour = "red") +
+#   facet_wrap(~ product, scales = "free")
+
+diff <- trade_nest %>% 
+        filter(flow == "Total Imports") %>%
+        mutate(tchart = pmap(list(data = data, title = "", subtitle = ""), threshold_plot),
+               vchart = pmap(list(data = data, title = "", subtitle = ""), value_plot),
+               charts = pmap(list(cht1 = vchart, cht2 = tchart, title = product, subtitle = flow), plot_list)) 
+
+# diff$tchart
+# diff$vchart
+
+# wrap_elements(diff$tchart, diff$vchart)
+
+diff$charts
+
+```
+
+
+## Methodology
+
+The empirical derivation of the escalation ranges was carried out using R. The scripts are available alongside this report. For each indicator the method for deriving an escalation range was as follows:
+
+1.	Obtain data for the indicator and convert into a time series in R
+2.	Determine how many first differences[^1]  and seasonal differences[^2]  need to be taken to make the time series stationary (constant statistical properties over time) using the ndiffs() and nsdiffs() functions from the forecast package in R
+3.	Carry out the required differencing using the diff() function from the forecast package in R
+4.	Using the data points in this stationary time series, find the threshold for outliers
+5.	Look at +/-5% of this threshold to get an escalation range which allows for some uncertainty
+6.	Sense check the escalation range by considering which past events would have warranted escalation given the derived range
+
+The sense check of the escalation ranges took the form of a workshop with relevant members of the food supply team, and further sharing of the results with other Defra colleagues for feedback.
+
+The main assumptions behind this method are:
+
+-	Past indicator data is useful to informing current escalation decisions
+-	The differences of a time series can be used to detect crises related to the original time series. Specifically jumps, 
+kinks, spikes etc… are not distinguished between in difference time series therefore the assumption is that all of these events should be identified by the escalation range.
+
+In this section the specifics of how the method was applied to each indicator are outlined. In general the escalation range is at the upper end of values for a given indicator as he aim is to flag unusually high levels of the indicator, the exception to this is the supply and demand indicators where the aim is to identify unusually low differences between supply and demand. This includes details of the workshop feedback on the preliminary findings and any modifications made as a result. At the end of the section some additional practical decisions on applying the escalation ranges that were reached in the workshop are explained.
+
+[^1]: Taking the first difference of a time series means converting it to a time series of the differences between adjacent observations in the original time series.
+[^2]: Taking the seasonal difference of a time series means converting it to a time series of the changes from one season to the next in the original time series.
