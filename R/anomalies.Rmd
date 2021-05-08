@@ -10,7 +10,8 @@ output:
 knitr::opts_chunk$set(
 	echo = FALSE,
 	message = FALSE,
-	warning = FALSE
+	warning = FALSE,
+	results = "hide"
 )
 library("here")
 library("dplyr")
@@ -23,9 +24,6 @@ library("patchwork")
 # source(here("R", "thresholds.R"))
 # https://data-se.netlify.app/2018/12/05/plot-many-ggplot-diagrams-using-nest-and-map/
 
-# url for non response data
-# https://www.uktradeinfo.com/trade-data/ots-custom-table/
-# ?id=35222291-0b7b-4309-af60-7bd2df3417e5
 
 # Read in trade data
 ffd <- read.csv(here("data", "raw", "ffd2.csv"),
@@ -138,15 +136,23 @@ plot_list <- function(cht1, cht2, title, subtitle){
 Some stuff about the trade threshold methodology.
 
 
-### Imports
+- This pack presents the first provisional estimates of trade data for February 2021 and includes revised data from HMRC for previous months. Note that all data from January 2020 onwards is provisional and subject to change.
+- Changes in data collection methods(1) from 1 Jan 2021 mean that care should be taken in the interpretation of changes in trade before and after this date.
+- There has been an unusually high level of non-response for EU to GB agri- food imports for February 21(1). Estimates to adjust for this non-response are included in the value data shown here, as published at an aggregate level by HMRC. HMRC do not publish non-response estimates for volumes.
+- In this pack, we focus on monthly trends but please note that monthly data can fluctuate, and small movements should be treated with caution.
+- We can’t attribute changes in trade to a single cause. The combined effects of COVID-19 national and international lockdown restrictions, EU exit uncertainty and border disruptions have all been contributing factors to the differing nature of recent UK and global trade. These (and other factors) will impact over a longer time period.
 
-#### Value
+
+## Imports {.tabset .tabset-pills}
+
+### Value
 
 ```{r import_value}
 
+selected <- c("Beer", "Cheese")
 
 diff <- trade_nest_val %>% 
-        # filter(flow == "Total Imports", product == "Yogurt") %>%
+        filter(flow == "Total Imports", product %in% selected) %>%
         mutate(tchart = pmap(list(data = data), threshold_plot),
                vchart = pmap(list(data = data), value_plot),
                charts = pmap(list(cht1 = vchart, cht2 = tchart, title = product, subtitle = flow), plot_list)) 
@@ -155,12 +161,12 @@ diff$charts
 
 ```
 
-#### Volume
+### Volume
 
 ```{r import_volume}
 
 diff <- trade_nest_vol %>% 
-        # filter(flow == "Total Imports", product == "Yogurt") %>%
+        filter(flow == "Total Imports") %>%
         mutate(tchart = pmap(list(data = data), threshold_plot),
                vchart = pmap(list(data = data), volume_plot),
                charts = pmap(list(cht1 = vchart, cht2 = tchart, title = product, subtitle = flow), plot_list)) 
@@ -170,12 +176,12 @@ diff$charts
 ```
 
 
-### Exports
+## Exports {.tabset .tabset-pills}
 
-#### Value
+### Value
 ```{r export_value}
 diff <- trade_nest_val %>% 
-        # filter(flow == "Total Exports", product == "Yogurt") %>%
+        filter(flow == "Total Exports") %>%
         mutate(tchart = pmap(list(data = data), threshold_plot),
                vchart = pmap(list(data = data), value_plot),
                charts = pmap(list(cht1 = vchart, cht2 = tchart, title = product, subtitle = flow), plot_list)) 
@@ -183,10 +189,10 @@ diff <- trade_nest_val %>%
 diff$charts
 ```
 
-#### Volume
+### Volume
 ```{r export_volume}
 diff <- trade_nest_vol %>% 
-        # filter(flow == "Total Exports", product == "Yogurt") %>%
+        filter(flow == "Total Exports") %>%
         mutate(tchart = pmap(list(data = data), threshold_plot),
                vchart = pmap(list(data = data), volume_plot),
                charts = pmap(list(cht1 = vchart, cht2 = tchart, title = product, subtitle = flow), plot_list)) 
