@@ -68,6 +68,8 @@ trade_nest_vol <- trade_vol %>%
                       nest()
 
 
+selected <- c("Beer", "Cheese")
+
 ```
 
 ```{r functions}
@@ -149,10 +151,9 @@ Some stuff about the trade threshold methodology.
 
 ```{r import_value}
 
-selected <- c("Beer", "Cheese")
-
 diff <- trade_nest_val %>% 
-        filter(flow == "Total Imports", product %in% selected) %>%
+        filter(flow == "Total Imports") %>%
+        filter(product %in% selected) %>%
         mutate(tchart = pmap(list(data = data), threshold_plot),
                vchart = pmap(list(data = data), value_plot),
                charts = pmap(list(cht1 = vchart, cht2 = tchart, title = product, subtitle = flow), plot_list)) 
@@ -167,6 +168,7 @@ diff$charts
 
 diff <- trade_nest_vol %>% 
         filter(flow == "Total Imports") %>%
+        filter(product %in% selected) %>%
         mutate(tchart = pmap(list(data = data), threshold_plot),
                vchart = pmap(list(data = data), volume_plot),
                charts = pmap(list(cht1 = vchart, cht2 = tchart, title = product, subtitle = flow), plot_list)) 
@@ -182,6 +184,7 @@ diff$charts
 ```{r export_value}
 diff <- trade_nest_val %>% 
         filter(flow == "Total Exports") %>%
+        filter(product %in% selected) %>%
         mutate(tchart = pmap(list(data = data), threshold_plot),
                vchart = pmap(list(data = data), value_plot),
                charts = pmap(list(cht1 = vchart, cht2 = tchart, title = product, subtitle = flow), plot_list)) 
@@ -192,7 +195,8 @@ diff$charts
 ### Volume
 ```{r export_volume}
 diff <- trade_nest_vol %>% 
-        filter(flow == "Total Exports") %>%
+        filter(flow == "Total Exports") %>% 
+        filter(product %in% selected) %>%
         mutate(tchart = pmap(list(data = data), threshold_plot),
                vchart = pmap(list(data = data), volume_plot),
                charts = pmap(list(cht1 = vchart, cht2 = tchart, title = product, subtitle = flow), plot_list)) 
