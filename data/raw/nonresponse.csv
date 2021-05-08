@@ -1,0 +1,57 @@
+﻿SITC1,SITC2,SITC3,SITC4,SITC5,Flow Type,Year,Month,Include in HS2 aggregation,Value (£)
+0 Food & live animals,00 Live animals other than animals of division 03,00 🔸 Non Response Estimates,00 🔸 Non Response Estimates,00 🔸 Non Response Estimates,EU - Exports,2021,January,INCLUDE,8742
+0 Food & live animals,00 Live animals other than animals of division 03,00 🔸 Non Response Estimates,00 🔸 Non Response Estimates,00 🔸 Non Response Estimates,EU - Exports,2021,February,INCLUDE,0
+0 Food & live animals,00 Live animals other than animals of division 03,00 🔸 Non Response Estimates,00 🔸 Non Response Estimates,00 🔸 Non Response Estimates,EU - Imports,2021,January,INCLUDE,1244222
+0 Food & live animals,00 Live animals other than animals of division 03,00 🔸 Non Response Estimates,00 🔸 Non Response Estimates,00 🔸 Non Response Estimates,EU - Imports,2021,February,INCLUDE,1338687
+0 Food & live animals,01 Meat & meat preparations,01 🔸 Non Response Estimates,01 🔸 Non Response Estimates,01 🔸 Non Response Estimates,EU - Exports,2021,January,INCLUDE,91273
+0 Food & live animals,01 Meat & meat preparations,01 🔸 Non Response Estimates,01 🔸 Non Response Estimates,01 🔸 Non Response Estimates,EU - Exports,2021,February,INCLUDE,70736
+0 Food & live animals,01 Meat & meat preparations,01 🔸 Non Response Estimates,01 🔸 Non Response Estimates,01 🔸 Non Response Estimates,EU - Imports,2021,January,INCLUDE,15948842
+0 Food & live animals,01 Meat & meat preparations,01 🔸 Non Response Estimates,01 🔸 Non Response Estimates,01 🔸 Non Response Estimates,EU - Imports,2021,February,INCLUDE,22638004
+0 Food & live animals,02 Dairy products & birds' eggs,02 🔸 Non Response Estimates,02 🔸 Non Response Estimates,02 🔸 Non Response Estimates,EU - Exports,2021,January,INCLUDE,1795642
+0 Food & live animals,02 Dairy products & birds' eggs,02 🔸 Non Response Estimates,02 🔸 Non Response Estimates,02 🔸 Non Response Estimates,EU - Exports,2021,February,INCLUDE,264840
+0 Food & live animals,02 Dairy products & birds' eggs,02 🔸 Non Response Estimates,02 🔸 Non Response Estimates,02 🔸 Non Response Estimates,EU - Imports,2021,January,INCLUDE,5928465
+0 Food & live animals,02 Dairy products & birds' eggs,02 🔸 Non Response Estimates,02 🔸 Non Response Estimates,02 🔸 Non Response Estimates,EU - Imports,2021,February,INCLUDE,19380277
+0 Food & live animals,"03 Fish,crustaceans,molluscs & aq.inverts & preps thereof",03 🔸 Non Response Estimates,03 🔸 Non Response Estimates,03 🔸 Non Response Estimates,EU - Exports,2021,January,INCLUDE,217621
+0 Food & live animals,"03 Fish,crustaceans,molluscs & aq.inverts & preps thereof",03 🔸 Non Response Estimates,03 🔸 Non Response Estimates,03 🔸 Non Response Estimates,EU - Exports,2021,February,INCLUDE,576974
+0 Food & live animals,"03 Fish,crustaceans,molluscs & aq.inverts & preps thereof",03 🔸 Non Response Estimates,03 🔸 Non Response Estimates,03 🔸 Non Response Estimates,EU - Imports,2021,January,INCLUDE,4179422
+0 Food & live animals,"03 Fish,crustaceans,molluscs & aq.inverts & preps thereof",03 🔸 Non Response Estimates,03 🔸 Non Response Estimates,03 🔸 Non Response Estimates,EU - Imports,2021,February,INCLUDE,9074818
+0 Food & live animals,04 Cereals & cereal preparations,04 🔸 Non Response Estimates,04 🔸 Non Response Estimates,04 🔸 Non Response Estimates,EU - Exports,2021,January,INCLUDE,68515
+0 Food & live animals,04 Cereals & cereal preparations,04 🔸 Non Response Estimates,04 🔸 Non Response Estimates,04 🔸 Non Response Estimates,EU - Exports,2021,February,INCLUDE,1521091
+0 Food & live animals,04 Cereals & cereal preparations,04 🔸 Non Response Estimates,04 🔸 Non Response Estimates,04 🔸 Non Response Estimates,EU - Imports,2021,January,INCLUDE,6964202
+0 Food & live animals,04 Cereals & cereal preparations,04 🔸 Non Response Estimates,04 🔸 Non Response Estimates,04 🔸 Non Response Estimates,EU - Imports,2021,February,INCLUDE,31214270
+0 Food & live animals,05 Vegetables & fruit,05 🔸 Non Response Estimates,05 🔸 Non Response Estimates,05 🔸 Non Response Estimates,EU - Exports,2021,January,INCLUDE,92965
+0 Food & live animals,05 Vegetables & fruit,05 🔸 Non Response Estimates,05 🔸 Non Response Estimates,05 🔸 Non Response Estimates,EU - Exports,2021,February,INCLUDE,721212
+0 Food & live animals,05 Vegetables & fruit,05 🔸 Non Response Estimates,05 🔸 Non Response Estimates,05 🔸 Non Response Estimates,EU - Imports,2021,January,INCLUDE,20444853
+0 Food & live animals,05 Vegetables & fruit,05 🔸 Non Response Estimates,05 🔸 Non Response Estimates,05 🔸 Non Response Estimates,EU - Imports,2021,February,INCLUDE,42638052
+0 Food & live animals,"06 Sugar, sugar preparations & honey",06 🔸 Non Response Estimates,06 🔸 Non Response Estimates,06 🔸 Non Response Estimates,EU - Exports,2021,January,INCLUDE,31400
+0 Food & live animals,"06 Sugar, sugar preparations & honey",06 🔸 Non Response Estimates,06 🔸 Non Response Estimates,06 🔸 Non Response Estimates,EU - Exports,2021,February,INCLUDE,360
+0 Food & live animals,"06 Sugar, sugar preparations & honey",06 🔸 Non Response Estimates,06 🔸 Non Response Estimates,06 🔸 Non Response Estimates,EU - Imports,2021,January,INCLUDE,1819558
+0 Food & live animals,"06 Sugar, sugar preparations & honey",06 🔸 Non Response Estimates,06 🔸 Non Response Estimates,06 🔸 Non Response Estimates,EU - Imports,2021,February,INCLUDE,4468357
+0 Food & live animals,"07 Coffee, tea, cocoa, spices & manufactures thereof",07 🔸 Non Response Estimates,07 🔸 Non Response Estimates,07 🔸 Non Response Estimates,EU - Exports,2021,January,INCLUDE,199017
+0 Food & live animals,"07 Coffee, tea, cocoa, spices & manufactures thereof",07 🔸 Non Response Estimates,07 🔸 Non Response Estimates,07 🔸 Non Response Estimates,EU - Exports,2021,February,INCLUDE,105150
+0 Food & live animals,"07 Coffee, tea, cocoa, spices & manufactures thereof",07 🔸 Non Response Estimates,07 🔸 Non Response Estimates,07 🔸 Non Response Estimates,EU - Imports,2021,January,INCLUDE,6055863
+0 Food & live animals,"07 Coffee, tea, cocoa, spices & manufactures thereof",07 🔸 Non Response Estimates,07 🔸 Non Response Estimates,07 🔸 Non Response Estimates,EU - Imports,2021,February,INCLUDE,20340480
+0 Food & live animals,08 Feeding stuff for animals (not inc.unmilled cereals),08 🔸 Non Response Estimates,08 🔸 Non Response Estimates,08 🔸 Non Response Estimates,EU - Exports,2021,January,INCLUDE,20705
+0 Food & live animals,08 Feeding stuff for animals (not inc.unmilled cereals),08 🔸 Non Response Estimates,08 🔸 Non Response Estimates,08 🔸 Non Response Estimates,EU - Exports,2021,February,INCLUDE,86600
+0 Food & live animals,08 Feeding stuff for animals (not inc.unmilled cereals),08 🔸 Non Response Estimates,08 🔸 Non Response Estimates,08 🔸 Non Response Estimates,EU - Imports,2021,January,INCLUDE,1333302
+0 Food & live animals,08 Feeding stuff for animals (not inc.unmilled cereals),08 🔸 Non Response Estimates,08 🔸 Non Response Estimates,08 🔸 Non Response Estimates,EU - Imports,2021,February,INCLUDE,9603304
+0 Food & live animals,09 Miscellaneous edible products & preparations,09 🔸 Non Response Estimates,09 🔸 Non Response Estimates,09 🔸 Non Response Estimates,EU - Exports,2021,January,INCLUDE,238885
+0 Food & live animals,09 Miscellaneous edible products & preparations,09 🔸 Non Response Estimates,09 🔸 Non Response Estimates,09 🔸 Non Response Estimates,EU - Exports,2021,February,INCLUDE,671064
+0 Food & live animals,09 Miscellaneous edible products & preparations,09 🔸 Non Response Estimates,09 🔸 Non Response Estimates,09 🔸 Non Response Estimates,EU - Imports,2021,January,INCLUDE,9700809
+0 Food & live animals,09 Miscellaneous edible products & preparations,09 🔸 Non Response Estimates,09 🔸 Non Response Estimates,09 🔸 Non Response Estimates,EU - Imports,2021,February,INCLUDE,16073903
+1 Beverages & tobacco,11 Beverages,11 🔸 Non Response Estimates,11 🔸 Non Response Estimates,11 🔸 Non Response Estimates,EU - Exports,2021,January,INCLUDE,820106
+1 Beverages & tobacco,11 Beverages,11 🔸 Non Response Estimates,11 🔸 Non Response Estimates,11 🔸 Non Response Estimates,EU - Exports,2021,February,INCLUDE,441756
+1 Beverages & tobacco,11 Beverages,11 🔸 Non Response Estimates,11 🔸 Non Response Estimates,11 🔸 Non Response Estimates,EU - Imports,2021,January,INCLUDE,17376400
+1 Beverages & tobacco,11 Beverages,11 🔸 Non Response Estimates,11 🔸 Non Response Estimates,11 🔸 Non Response Estimates,EU - Imports,2021,February,INCLUDE,32392733
+"4 Animal & vegetable oils, fats & waxes",41 Animal oils & fats,41 🔸 Non Response Estimates,41 🔸 Non Response Estimates,41 🔸 Non Response Estimates,EU - Exports,2021,January,INCLUDE,85
+"4 Animal & vegetable oils, fats & waxes",41 Animal oils & fats,41 🔸 Non Response Estimates,41 🔸 Non Response Estimates,41 🔸 Non Response Estimates,EU - Exports,2021,February,INCLUDE,8
+"4 Animal & vegetable oils, fats & waxes",41 Animal oils & fats,41 🔸 Non Response Estimates,41 🔸 Non Response Estimates,41 🔸 Non Response Estimates,EU - Imports,2021,January,INCLUDE,429790
+"4 Animal & vegetable oils, fats & waxes",41 Animal oils & fats,41 🔸 Non Response Estimates,41 🔸 Non Response Estimates,41 🔸 Non Response Estimates,EU - Imports,2021,February,INCLUDE,456715
+"4 Animal & vegetable oils, fats & waxes","42 Fixed vegetable fats & oils, crude,refined,fractionated",42 🔸 Non Response Estimates,42 🔸 Non Response Estimates,42 🔸 Non Response Estimates,EU - Exports,2021,January,INCLUDE,351
+"4 Animal & vegetable oils, fats & waxes","42 Fixed vegetable fats & oils, crude,refined,fractionated",42 🔸 Non Response Estimates,42 🔸 Non Response Estimates,42 🔸 Non Response Estimates,EU - Exports,2021,February,INCLUDE,7
+"4 Animal & vegetable oils, fats & waxes","42 Fixed vegetable fats & oils, crude,refined,fractionated",42 🔸 Non Response Estimates,42 🔸 Non Response Estimates,42 🔸 Non Response Estimates,EU - Imports,2021,January,INCLUDE,624177
+"4 Animal & vegetable oils, fats & waxes","42 Fixed vegetable fats & oils, crude,refined,fractionated",42 🔸 Non Response Estimates,42 🔸 Non Response Estimates,42 🔸 Non Response Estimates,EU - Imports,2021,February,INCLUDE,3421119
+"4 Animal & vegetable oils, fats & waxes","43 Animal or vegetable fats & oils, processed, & waxes",43 🔸 Non Response Estimates,43 🔸 Non Response Estimates,43 🔸 Non Response Estimates,EU - Exports,2021,January,INCLUDE,0
+"4 Animal & vegetable oils, fats & waxes","43 Animal or vegetable fats & oils, processed, & waxes",43 🔸 Non Response Estimates,43 🔸 Non Response Estimates,43 🔸 Non Response Estimates,EU - Exports,2021,February,INCLUDE,888
+"4 Animal & vegetable oils, fats & waxes","43 Animal or vegetable fats & oils, processed, & waxes",43 🔸 Non Response Estimates,43 🔸 Non Response Estimates,43 🔸 Non Response Estimates,EU - Imports,2021,January,INCLUDE,57091
+"4 Animal & vegetable oils, fats & waxes","43 Animal or vegetable fats & oils, processed, & waxes",43 🔸 Non Response Estimates,43 🔸 Non Response Estimates,43 🔸 Non Response Estimates,EU - Imports,2021,February,INCLUDE,168690

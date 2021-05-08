@@ -1,11 +1,17 @@
 ---
-title: "Untitled"
-output: html_document
+title: "UK Trade anomalies"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE
+)
 library("here")
 library("dplyr")
 library("ggplot2")
@@ -17,12 +23,18 @@ library("patchwork")
 # source(here("R", "thresholds.R"))
 # https://data-se.netlify.app/2018/12/05/plot-many-ggplot-diagrams-using-nest-and-map/
 
+# url for non response data
+# https://www.uktradeinfo.com/trade-data/ots-custom-table/
+# ?id=35222291-0b7b-4309-af60-7bd2df3417e5
+
 # Read in trade data
 ffd <- read.csv(here("data", "raw", "ffd2.csv"),
                 col.names = c("year", "month", "flow", "product", "value", "tonnes"))
 
+
+# Value data setup -------------------------------------------------------------
 # Create thresholds
-trade <- ffd %>% 
+trade_val <- ffd %>% 
   mutate(date = as.Date(paste(year, month, "1", sep = "-"), format = "%Y-%m-%d")) %>% 
   group_by(product, flow) %>% 
   mutate(diff = value - lag(value),
@@ -34,28 +46,45 @@ trade <- ffd %>%
          limlowerlb = limlower * 0.95)
 
 # Nested for charting
-trade_nest <- trade %>% 
-              ungroup() %>% 
-              # filter(flow == "Total Exports") %>%
-              group_by(flow, product) %>%
-              nest()
+trade_nest_val <- trade_val %>% 
+                      ungroup() %>% 
+                      group_by(flow, product) %>%
+                      nest()
 
+# Volume data setup ------------------------------------------------------------
+trade_vol <- ffd %>% 
+  mutate(date = as.Date(paste(year, month, "1", sep = "-"), format = "%Y-%m-%d")) %>% 
+  group_by(product, flow) %>% 
+  mutate(diff = tonnes - lag(tonnes),
+         limupper = quantile(diff, 0.75, na.rm = TRUE) + (quantile(diff, 0.75, na.rm = TRUE) - quantile(diff, 0.25, na.rm = TRUE)) * 1.5,
+         limupperub = limupper * 1.05,
+         limupperlb = limupper * 0.95,
+         limlower = quantile(diff, 0.25, na.rm = TRUE) - (quantile(diff, 0.75, na.rm = TRUE) - quantile(diff, 0.25, na.rm = TRUE)) * 1.5,
+         limlowerub = limlower * 1.05,
+         limlowerlb = limlower * 0.95)
+
+# Nested for charting
+trade_nest_vol <- trade_vol %>% 
+                      ungroup() %>% 
+                      group_by(flow, product) %>%
+                      nest()
 
 
 ```
 
 ```{r functions}
 
-threshold_plot <- function(data, title, subtitle){
+threshold_plot <- function(data){
   data %>% 
     ggplot() +
-    geom_line(aes(x = date, y = diff), colour = "blue") +
-    geom_point(aes(x = date, y = diff), colour = "blue") +
+    geom_line(aes(x = date, y = diff), colour = "blue", size = 0.5) +
+    geom_point(aes(x = date, y = diff), colour = "blue", size = 0.5) +
     geom_line(aes(x = date, y = limupper), colour = "red", size = 3, alpha = 0.25) +
     geom_line(aes(x = date, y = limlower), colour = "red", size = 3, alpha = 0.25) +
     scale_x_date(date_breaks = "1 year", date_labels = "%Y") +
-    labs(title = title,
-         subtitle = subtitle) +
+    labs(x = NULL,
+         y = NULL,
+         subtitle = "Thresholds") +
     theme_minimal() +
     theme(panel.grid.minor = element_blank())
     # facet_wrap(~ product, scales = "free")
@@ -63,19 +92,37 @@ threshold_plot <- function(data, title, subtitle){
 }
 
 
-value_plot <- function(data, title, subtitle){
+
+value_plot <- function(data){
   data %>% 
     ggplot() +
-    geom_line(aes(x = date, y = value), colour = "blue") +
-    geom_point(aes(x = date, y = value), colour = "blue") +
+    geom_line(aes(x = date, y = value), colour = "blue", size = 0.5) +
+    geom_point(aes(x = date, y = value), colour = "blue", size = 0.5) +
     scale_x_date(date_breaks = "1 year", date_labels = "%Y") +
-    labs(title = title,
-         subtitle = subtitle) +
+    labs(x = NULL,
+         y = "£000s",
+         subtitle = "Trade value") +
     theme_minimal() +
     theme(panel.grid.minor = element_blank())
     # facet_wrap(~ product, scales = "free")
   
 }
+
+volume_plot <- function(data){
+  data %>% 
+    ggplot() +
+    geom_line(aes(x = date, y = tonnes), colour = "blue", size = 0.5) +
+    geom_point(aes(x = date, y = tonnes), colour = "blue", size = 0.5) +
+    scale_x_date(date_breaks = "1 year", date_labels = "%Y") +
+    labs(x = NULL,
+         y = "tonnes",
+         subtitle = "Trade volume") +
+    theme_minimal() +
+    theme(panel.grid.minor = element_blank())
+    # facet_wrap(~ product, scales = "free")
+  
+}
+
 
 plot_list <- function(cht1, cht2, title, subtitle){
   (cht1 / cht2) +
@@ -86,34 +133,67 @@ plot_list <- function(cht1, cht2, title, subtitle){
 
 ```
 
-## UK Trade data
+## Preamble
+
+Some stuff about the trade threshold methodology.
+
 
 ### Imports
 
-```{r}
+#### Value
 
-# trade_group %>% 
-#   filter(flow == "Total Exports", product == "Cheese") %>%
-#   ggplot() +
-#   geom_line(aes(x = date, y = diff)) +
-#   geom_line(aes(x = date, y = limupper), colour = "red") +
-#   geom_line(aes(x = date, y = limlower), colour = "red") +
-#   facet_wrap(~ product, scales = "free")
+```{r import_value}
 
-diff <- trade_nest %>% 
-        filter(flow == "Total Imports") %>%
-        mutate(tchart = pmap(list(data = data, title = "", subtitle = ""), threshold_plot),
-               vchart = pmap(list(data = data, title = "", subtitle = ""), value_plot),
+
+diff <- trade_nest_val %>% 
+        # filter(flow == "Total Imports", product == "Yogurt") %>%
+        mutate(tchart = pmap(list(data = data), threshold_plot),
+               vchart = pmap(list(data = data), value_plot),
                charts = pmap(list(cht1 = vchart, cht2 = tchart, title = product, subtitle = flow), plot_list)) 
-
-# diff$tchart
-# diff$vchart
-
-# wrap_elements(diff$tchart, diff$vchart)
 
 diff$charts
 
 ```
+
+#### Volume
+
+```{r import_volume}
+
+diff <- trade_nest_vol %>% 
+        # filter(flow == "Total Imports", product == "Yogurt") %>%
+        mutate(tchart = pmap(list(data = data), threshold_plot),
+               vchart = pmap(list(data = data), volume_plot),
+               charts = pmap(list(cht1 = vchart, cht2 = tchart, title = product, subtitle = flow), plot_list)) 
+
+diff$charts
+
+```
+
+
+### Exports
+
+#### Value
+```{r export_value}
+diff <- trade_nest_val %>% 
+        # filter(flow == "Total Exports", product == "Yogurt") %>%
+        mutate(tchart = pmap(list(data = data), threshold_plot),
+               vchart = pmap(list(data = data), value_plot),
+               charts = pmap(list(cht1 = vchart, cht2 = tchart, title = product, subtitle = flow), plot_list)) 
+
+diff$charts
+```
+
+#### Volume
+```{r export_volume}
+diff <- trade_nest_vol %>% 
+        # filter(flow == "Total Exports", product == "Yogurt") %>%
+        mutate(tchart = pmap(list(data = data), threshold_plot),
+               vchart = pmap(list(data = data), volume_plot),
+               charts = pmap(list(cht1 = vchart, cht2 = tchart, title = product, subtitle = flow), plot_list)) 
+
+diff$charts
+```
+
 
 
 ## Methodology
