@@ -68,7 +68,9 @@ trade_nest_vol <- trade_vol %>%
                       nest()
 
 
-selected <- c("Beer", "Cheese")
+# every FFD code
+selected <- unique(ffd$product)
+# selected <- c("Beer", "Cheese")
 
 ```
 
@@ -79,8 +81,8 @@ threshold_plot <- function(data){
     ggplot() +
     geom_line(aes(x = date, y = diff), colour = "blue", size = 0.5) +
     geom_point(aes(x = date, y = diff), colour = "blue", size = 0.5) +
-    geom_line(aes(x = date, y = limupper), colour = "red", size = 3, alpha = 0.25) +
-    geom_line(aes(x = date, y = limlower), colour = "red", size = 3, alpha = 0.25) +
+    geom_line(aes(x = date, y = limupper), colour = "cyan4", size = 3, alpha = 0.25) +
+    geom_line(aes(x = date, y = limlower), colour = "cyan4", size = 3, alpha = 0.25) +
     scale_x_date(date_breaks = "1 year", date_labels = "%Y") +
     labs(x = NULL,
          y = NULL,
