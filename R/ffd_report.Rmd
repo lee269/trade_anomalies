@@ -1,0 +1,100 @@
+---
+title: "FFD report"
+output: html_document
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library("here")
+library("dplyr")
+library("ggplot2")
+library("purrr")
+library("tidyr")
+library("patchwork")
+library("stringr")
+
+# Read in trade data
+ffd <- read.csv(here("data", "raw", "ffd202103.csv"),
+                col.names = c("year", "month", "flow", "divcode", "divdesc", "product", "value", "tonnes"))
+
+
+
+trade_val <- ffd %>% 
+  mutate(date = as.Date(paste(year, month, "1", sep = "-"), format = "%Y-%m-%d")) %>% 
+  mutate(flow = case_when(flow == "Total Exports" ~ "Exports",
+                          flow == "Total Imports" ~ "Imports")) %>% 
+  group_by(flow, divcode, date) %>% 
+  summarise(total = sum(value)) %>% 
+  filter(date >= "2018-01-01") %>% 
+  ungroup()
+
+
+
+
+
+
+
+
+nonresponse <- read_csv(here("data", "raw", "nonresponse.csv"),
+                        col_names = c("sitc1",
+                                      "sitc2",
+                                      "sitc3",
+                                      "sitc4",
+                                      "sitc5",
+                                      "flow",
+                                      "year",
+                                      "month",
+                                      "include",
+                                      "value_sterling"),
+                        skip = 1) %>% 
+                  select(!(sitc3:sitc5)) %>% 
+                  mutate(date = ymd(paste(year, month, "1", sep = "-")))
+
+nr_val <- nonresponse %>% 
+          mutate(flow = case_when(flow == "EU - Exports" ~ "Exports",
+                                  flow == "EU - Imports" ~ "Imports"),
+                          divcode = case_when(str_starts(sitc2, "00") ~ 0,
+                                             str_starts(sitc2, "01") ~ 1,
+                                             str_starts(sitc2, "02") ~ 2,
+                                             str_starts(sitc2, "03") ~ 3,
+                                             str_starts(sitc2, "04") ~ 4,
+                                             str_starts(sitc2, "05") ~ 5,
+                                             str_starts(sitc2, "06") ~ 6,
+                                             str_starts(sitc2, "07") ~ 7,
+                                             str_starts(sitc2, "08") ~ 8,
+                                             str_starts(sitc2, "09") ~ 9,
+                                             str_starts(sitc2, "11") ~ 11,
+                                             str_starts(sitc2, "22") ~ 22,
+                                             str_starts(sitc2, "41") ~ 41,
+                                             str_starts(sitc2, "42") ~ 42,
+                                             str_starts(sitc2, "43") ~ 43))
+          
+combined <- trade_val %>% 
+            left_join(nr_val) %>% 
+            select(date, flow, divcode, total, value_sterling) %>% 
+            mutate(value = total + value_sterling,
+                   value = replace_na(value, 0)) %>% 
+            group_by(date, flow) %>% 
+            summarise(value = sum(value)) %>% 
+            ungroup()
+
+c2 <- combined %>% 
+      group_by(date, flow) %>%
+      mutate(diff = lag(value) - value)
+
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+

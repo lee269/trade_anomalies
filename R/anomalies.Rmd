@@ -26,8 +26,15 @@ library("patchwork")
 
 
 # Read in trade data
-ffd <- read.csv(here("data", "raw", "ffd2.csv"),
-                col.names = c("year", "month", "flow", "product", "value", "tonnes"))
+ffd <- read.csv(here("data", "raw", "ffd202103.csv"),
+                col.names = c("year", "month", "flow", "divcode", "divdesc", "product", "value", "tonnes"))
+
+# Summarise by div
+# ffd <- ffd %>% 
+#         group_by(year, month, flow, divdesc) %>% 
+#         summarise(value = sum(value),
+#                   tonnes = sum(tonnes)) %>% 
+#         rename(product = divdesc)
 
 
 # Value data setup -------------------------------------------------------------

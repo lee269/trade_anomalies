@@ -9,7 +9,7 @@ library(ggplot2)
 # ?id=35222291-0b7b-4309-af60-7bd2df3417e5
 
 # Read in data
-nonresponse <- read_csv(here("data", "raw", "nonresponse2.csv"),
+nonresponse <- read_csv(here("data", "raw", "nonresponse.csv"),
                         col_names = c("sitc1",
                                       "sitc2",
                                       "sitc3",
@@ -44,3 +44,5 @@ products %>%
           geom_line(aes(colour = sitc2)) +
           facet_grid(cols = vars(flow)) +
           guides(fill = guide_legend(direction = "horizontal"))
+
+
