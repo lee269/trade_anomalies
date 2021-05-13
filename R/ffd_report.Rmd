@@ -16,6 +16,8 @@ library("purrr")
 library("tidyr")
 library("patchwork")
 library("stringr")
+library("readr")
+library("lubridate")
 
 # Read in trade data
 ffd <- read.csv(here("data", "raw", "ffd202103.csv"),
@@ -83,8 +85,10 @@ combined <- trade_val %>%
             ungroup()
 
 c2 <- combined %>% 
-      group_by(date, flow) %>%
-      mutate(diff = lag(value) - value)
+      group_by(flow) %>%
+      mutate(diff = lag(value, n = 12, order_by = date),
+             yoy = ((value/diff)*100)-100) %>% 
+      arrange(flow)
 
 ```
 
@@ -95,6 +99,10 @@ This is an R Markdown document. Markdown is a simple formatting syntax for autho
 When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
 ```{r cars}
-summary(cars)
+ffdcountry <- read.csv(here("data", "raw", "ffdcountry202103.csv"),
+                       col.names = c("year", "month", "flow", "eunoneu", "country", "divcode", "divdesc", "value", "tonnes"))
+
+
+
 ```
 
