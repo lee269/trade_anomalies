@@ -1,13 +1,15 @@
 ---
 title: "FFD report"
 output: html_document
-  html_document:
-    toc: true
-    toc_float: true
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE,
+	results = "hide"
+)
 
 library("here")
 library("dplyr")
@@ -18,6 +20,29 @@ library("patchwork")
 library("stringr")
 library("readr")
 library("lubridate")
+library("scales")
+
+
+money <-  function(x) {
+  z <- abs(x)
+  
+  if(is.na(z)) {return(0)}
+  
+  b.index <-  z >= 1e9
+  m.index <-  z >= 1e5 & z < 1e9
+  
+  if(x > 0) {
+      output <-  paste("£", formatC(z, format = "d", big.mark = ","), sep = "")
+      output[b.index] <-  paste("£", formatC(z[b.index] / 1e9, digits = 1, format = "f"), "bn", sep = "")
+      output[m.index] <-  paste("£", formatC(x[m.index] / 1e6, digits = 1, format = "f"), "m", sep = "")
+      return(output)
+    } else {
+      output <-  paste("-£", formatC(z, format = "d", big.mark = ","), sep = "")
+      output[b.index] <-  paste("-£", formatC(z[b.index] / 1e9, digits = 1, format = "f"), "bn", sep = "")
+      output[m.index] <-  paste("-£", formatC(z[m.index] / 1e6, digits = 1, format = "f"), "m", sep = "")
+      return(output)
+    }
+}
 
 # Read in trade data
 ffd <- read.csv(here("data", "raw", "ffd202103.csv"),
@@ -25,12 +50,12 @@ ffd <- read.csv(here("data", "raw", "ffd202103.csv"),
 
 
 
-trade_val <- ffd %>% 
+divs <- ffd %>% 
   mutate(date = as.Date(paste(year, month, "1", sep = "-"), format = "%Y-%m-%d")) %>% 
   mutate(flow = case_when(flow == "Total Exports" ~ "Exports",
                           flow == "Total Imports" ~ "Imports")) %>% 
   group_by(flow, divcode, date) %>% 
-  summarise(total = sum(value)) %>% 
+  summarise(value = sum(value)) %>% 
   filter(date >= "2018-01-01") %>% 
   ungroup()
 
@@ -41,7 +66,7 @@ trade_val <- ffd %>%
 
 
 
-nonresponse <- read_csv(here("data", "raw", "nonresponse.csv"),
+nonresponse <- read_csv(here("data", "raw", "nonresponse202103.csv"),
                         col_names = c("sitc1",
                                       "sitc2",
                                       "sitc3",
@@ -53,56 +78,148 @@ nonresponse <- read_csv(here("data", "raw", "nonresponse.csv"),
                                       "include",
                                       "value_sterling"),
                         skip = 1) %>% 
-                  select(!(sitc3:sitc5)) %>% 
-                  mutate(date = ymd(paste(year, month, "1", sep = "-")))
-
-nr_val <- nonresponse %>% 
-          mutate(flow = case_when(flow == "EU - Exports" ~ "Exports",
-                                  flow == "EU - Imports" ~ "Imports"),
-                          divcode = case_when(str_starts(sitc2, "00") ~ 0,
-                                             str_starts(sitc2, "01") ~ 1,
-                                             str_starts(sitc2, "02") ~ 2,
-                                             str_starts(sitc2, "03") ~ 3,
-                                             str_starts(sitc2, "04") ~ 4,
-                                             str_starts(sitc2, "05") ~ 5,
-                                             str_starts(sitc2, "06") ~ 6,
-                                             str_starts(sitc2, "07") ~ 7,
-                                             str_starts(sitc2, "08") ~ 8,
-                                             str_starts(sitc2, "09") ~ 9,
-                                             str_starts(sitc2, "11") ~ 11,
-                                             str_starts(sitc2, "22") ~ 22,
-                                             str_starts(sitc2, "41") ~ 41,
-                                             str_starts(sitc2, "42") ~ 42,
-                                             str_starts(sitc2, "43") ~ 43))
+  select(!(sitc3:sitc5)) %>% 
+  mutate(date = ymd(paste(year, month, "1", sep = "-")),
+         flow = case_when(flow == "EU - Exports" ~ "Exports",
+                          flow == "EU - Imports" ~ "Imports"),
+         divcode = case_when(str_starts(sitc2, "00") ~ 0,
+                             str_starts(sitc2, "01") ~ 1,
+                             str_starts(sitc2, "02") ~ 2,
+                             str_starts(sitc2, "03") ~ 3,
+                             str_starts(sitc2, "04") ~ 4,
+                             str_starts(sitc2, "05") ~ 5,
+                             str_starts(sitc2, "06") ~ 6,
+                             str_starts(sitc2, "07") ~ 7,
+                             str_starts(sitc2, "08") ~ 8,
+                             str_starts(sitc2, "09") ~ 9,
+                             str_starts(sitc2, "11") ~ 11,
+                             str_starts(sitc2, "22") ~ 22,
+                             str_starts(sitc2, "41") ~ 41,
+                             str_starts(sitc2, "42") ~ 42,
+                             str_starts(sitc2, "43") ~ 43),
+         valuenr = value_sterling /1000) %>% 
+         select(date, flow, divcode, valuenr) %>% 
+         filter(divcode != 0)
           
-combined <- trade_val %>% 
-            left_join(nr_val) %>% 
-            select(date, flow, divcode, total, value_sterling) %>% 
-            mutate(value = total + value_sterling,
-                   value = replace_na(value, 0)) %>% 
-            group_by(date, flow) %>% 
-            summarise(value = sum(value)) %>% 
-            ungroup()
+ffdall <- divs %>% 
+     left_join(nonresponse) %>% 
+      mutate(valuetot = replace_na(value + valuenr, 0)) %>% 
+      group_by(date, flow) %>% 
+      summarise(value = sum(valuetot)) %>% 
+      ungroup()
 
-c2 <- combined %>% 
+
+yoy <- ffdall %>%
       group_by(flow) %>%
       mutate(diff = lag(value, n = 12, order_by = date),
-             yoy = ((value/diff)*100)-100) %>% 
+             yoy = (value/diff)-1) %>%
       arrange(flow)
 
+
+
 ```
 
-## R Markdown
+## Trade in FFD by value
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+-   __Imports__ in March were **`r yoy %>% filter(date == "2021-03-01", flow == "Imports") %>% mutate(value = value * 1000) %>%  pull(value) %>% money`** which is `r  yoy %>% filter(date == "2021-03-01", flow == "Imports")  %>% pull(yoy) %>% scales::percent()` down on March 2020. Trade has generally recovered from the downturn seen in the first two months of 2021.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+-   __Exports__ in March were **`r yoy %>% filter(date == "2021-03-01", flow == "Exports") %>% mutate(value = value * 1000) %>%  pull(value) %>% money`** which is `r  yoy %>% filter(date == "2021-03-01", flow == "Exports")  %>% pull(yoy) %>% scales::percent()` down on March 2020.
 
-```{r cars}
+Trade has generally recovered from the downturn seen in the first two months of 2021.
+
+```{r }
+
+ffdall %>%
+  ggplot(aes(x = date, y = value)) + 
+  geom_bar(aes(fill = flow), stat = "identity") +
+  facet_grid(rows = ~flow) +
+  scale_y_continuous(labels = scales::comma) +
+  theme_minimal() +
+  labs(x = NULL,
+       y = "£000s",
+       title = "Value of trade in food, feed and drink")
+
+
+
+yoy %>% 
+  ggplot(aes(x = date, y = yoy)) +
+  geom_bar(aes(fill = flow), stat = "identity") +
+  facet_grid(rows = ~flow) +
+  scale_y_continuous(labels = scales::percent) + 
+  theme_minimal() +
+  labs(x = NULL,
+       y = "% change year on year",
+       title = "Percentage change in value of trade")
+
+```
+
+
+## Non response estimates
+
+Non response does not impact very much on overall trade values.
+
+``` {r nonresponse}
+
+ffddiv <- divs %>% 
+     left_join(nonresponse) %>% 
+      # mutate(valuetot = replace_na(value + valuenr, 0)) %>% 
+      pivot_longer(cols = value:valuenr)
+
+ffddiv %>% 
+  # filter(flow == "Exports") %>% 
+  ggplot(aes(x = date, y = value)) + 
+  geom_bar(aes(fill = name), stat = "identity") +
+  facet_grid(row = ~flow) +
+  theme_minimal()
+
+```
+
+
+## Country splits 
+
+``` {r countries}
+
 ffdcountry <- read.csv(here("data", "raw", "ffdcountry202103.csv"),
-                       col.names = c("year", "month", "flow", "eunoneu", "country", "divcode", "divdesc", "value", "tonnes"))
+                       col.names = c("year", "month", "flow", "eunoneu", "country", "divcode", "divdesc", "value", "tonnes")) %>% 
+    mutate(date = as.Date(paste(year, month, "1", sep = "-"), format = "%Y-%m-%d"), 
+           flow = case_when(flow == "Total Exports" ~ "Exports",
+                          flow == "Total Imports" ~ "Imports"))
+
+
+eu <- ffdcountry %>% 
+        select(date, flow, eunoneu, country, divcode, divdesc, value) %>% 
+        group_by(date, flow, eunoneu) %>% 
+        summarise(value = sum(value))
+
+eu %>% 
+  ggplot(aes(x = date, y = value)) +
+  geom_line(aes(colour = flow)) +
+  facet_grid(rows = ~eunoneu) +
+  theme_minimal() +
+  scale_y_continuous(labels = comma) +
+  labs(x = NULL,
+       y = "£000s",
+       title = "Value of trade")
+
+euyoy <- eu %>% 
+        group_by(eunoneu, flow) %>% 
+        mutate(diff = lag(value, n = 12),
+               yoy = percent((value/diff) - 1),
+               amount = money(value*1000)) %>% 
+        arrange(flow, eunoneu) %>% 
+        filter(date == "2021-03-01") %>% 
+        select(flow, eunoneu, amount, yoy)
+
+```
+
+`r knitr::kable(euyoy)`
+
+
+## By product
+
+``` {r product}
+
 
 
 
 ```
-
