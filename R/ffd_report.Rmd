@@ -22,49 +22,23 @@ library("readr")
 library("lubridate")
 library("scales")
 
+source(here("R", "money.R"))
 
-money <-  function(x) {
-  z <- abs(x)
-  
-  if(is.na(z)) {return(0)}
-  
-  b.index <-  z >= 1e9
-  m.index <-  z >= 1e5 & z < 1e9
-  
-  if(x > 0) {
-      output <-  paste("£", formatC(z, format = "d", big.mark = ","), sep = "")
-      output[b.index] <-  paste("£", formatC(z[b.index] / 1e9, digits = 1, format = "f"), "bn", sep = "")
-      output[m.index] <-  paste("£", formatC(x[m.index] / 1e6, digits = 1, format = "f"), "m", sep = "")
-      return(output)
-    } else {
-      output <-  paste("-£", formatC(z, format = "d", big.mark = ","), sep = "")
-      output[b.index] <-  paste("-£", formatC(z[b.index] / 1e9, digits = 1, format = "f"), "bn", sep = "")
-      output[m.index] <-  paste("-£", formatC(z[m.index] / 1e6, digits = 1, format = "f"), "m", sep = "")
-      return(output)
-    }
-}
 
-# Read in trade data
+# Read in datasets
 ffd <- read.csv(here("data", "raw", "ffd202103.csv"),
-                col.names = c("year", "month", "flow", "divcode", "divdesc", "product", "value", "tonnes"))
-
-
-
-divs <- ffd %>% 
+                col.names = c("year", "month", "flow", "divcode", "divdesc", "product", "value", "tonnes")) %>% 
   mutate(date = as.Date(paste(year, month, "1", sep = "-"), format = "%Y-%m-%d")) %>% 
   mutate(flow = case_when(flow == "Total Exports" ~ "Exports",
                           flow == "Total Imports" ~ "Imports")) %>% 
-  group_by(flow, divcode, date) %>% 
-  summarise(value = sum(value)) %>% 
-  filter(date >= "2018-01-01") %>% 
-  ungroup()
+  filter(divcode != 22)
 
 
-
-
-
-
-
+ffdcountry <- read.csv(here("data", "raw", "ffdcountry202103.csv"),
+                       col.names = c("year", "month", "flow", "eunoneu", "country", "divcode", "divdesc", "value", "tonnes")) %>% 
+    mutate(date = as.Date(paste(year, month, "1", sep = "-"), format = "%Y-%m-%d"), 
+           flow = case_when(flow == "Total Exports" ~ "Exports",
+                          flow == "Total Imports" ~ "Imports"))
 
 nonresponse <- read_csv(here("data", "raw", "nonresponse202103.csv"),
                         col_names = c("sitc1",
@@ -100,7 +74,23 @@ nonresponse <- read_csv(here("data", "raw", "nonresponse202103.csv"),
          valuenr = value_sterling /1000) %>% 
          select(date, flow, divcode, valuenr) %>% 
          filter(divcode != 0)
-          
+
+divcodes <- read.csv(here("data", "tidy", "divcodes.csv"))
+
+
+```
+
+``` {r value_summary}
+
+# FFD totals -----------------------------------------------------------------
+# FFD by div
+divs <- ffd %>% 
+  group_by(flow, divcode, date) %>% 
+  summarise(value = sum(value)) %>% 
+  filter(date >= "2018-01-01") %>% 
+  ungroup()
+
+# Join with nonresponse
 ffdall <- divs %>% 
      left_join(nonresponse) %>% 
       mutate(valuetot = replace_na(value + valuenr, 0)) %>% 
@@ -108,12 +98,27 @@ ffdall <- divs %>%
       summarise(value = sum(valuetot)) %>% 
       ungroup()
 
-
+# Get year on year %ages
 yoy <- ffdall %>%
       group_by(flow) %>%
       mutate(diff = lag(value, n = 12, order_by = date),
              yoy = (value/diff)-1) %>%
       arrange(flow)
+
+# EU split --------------------------------------------------------------------
+eu <- ffdcountry %>% 
+        select(date, flow, eunoneu, country, divcode, divdesc, value) %>% 
+        group_by(date, flow, eunoneu) %>% 
+        summarise(value = sum(value))
+
+euyoy <- eu %>% 
+        group_by(eunoneu, flow) %>% 
+        mutate(diff = lag(value, n = 12),
+               yoy = percent((value/diff) - 1),
+               amount = money(value*1000)) %>% 
+        arrange(flow, eunoneu) %>% 
+        filter(date == "2021-03-01") %>% 
+        select(flow, eunoneu, amount, yoy)
 
 
 
@@ -127,11 +132,14 @@ yoy <- ffdall %>%
 
 Trade has generally recovered from the downturn seen in the first two months of 2021.
 
+`r knitr::kable(euyoy)`
+
+
 ```{r }
 
 ffdall %>%
   ggplot(aes(x = date, y = value)) + 
-  geom_bar(aes(fill = flow), stat = "identity") +
+  geom_line(aes(colour = flow), stat = "identity") +
   facet_grid(rows = ~flow) +
   scale_y_continuous(labels = scales::comma) +
   theme_minimal() +
@@ -145,51 +153,12 @@ yoy %>%
   ggplot(aes(x = date, y = yoy)) +
   geom_bar(aes(fill = flow), stat = "identity") +
   facet_grid(rows = ~flow) +
-  scale_y_continuous(labels = scales::percent) + 
+  scale_y_continuous(labels = scales::percent) +
+  scale_x_date(limits = ymd(c("2018-01-01", "2021-03-01"))) +
   theme_minimal() +
   labs(x = NULL,
        y = "% change year on year",
        title = "Percentage change in value of trade")
-
-```
-
-
-## Non response estimates
-
-Non response does not impact very much on overall trade values.
-
-``` {r nonresponse}
-
-ffddiv <- divs %>% 
-     left_join(nonresponse) %>% 
-      # mutate(valuetot = replace_na(value + valuenr, 0)) %>% 
-      pivot_longer(cols = value:valuenr)
-
-ffddiv %>% 
-  # filter(flow == "Exports") %>% 
-  ggplot(aes(x = date, y = value)) + 
-  geom_bar(aes(fill = name), stat = "identity") +
-  facet_grid(row = ~flow) +
-  theme_minimal()
-
-```
-
-
-## Country splits 
-
-``` {r countries}
-
-ffdcountry <- read.csv(here("data", "raw", "ffdcountry202103.csv"),
-                       col.names = c("year", "month", "flow", "eunoneu", "country", "divcode", "divdesc", "value", "tonnes")) %>% 
-    mutate(date = as.Date(paste(year, month, "1", sep = "-"), format = "%Y-%m-%d"), 
-           flow = case_when(flow == "Total Exports" ~ "Exports",
-                          flow == "Total Imports" ~ "Imports"))
-
-
-eu <- ffdcountry %>% 
-        select(date, flow, eunoneu, country, divcode, divdesc, value) %>% 
-        group_by(date, flow, eunoneu) %>% 
-        summarise(value = sum(value))
 
 eu %>% 
   ggplot(aes(x = date, y = value)) +
@@ -201,25 +170,91 @@ eu %>%
        y = "£000s",
        title = "Value of trade")
 
-euyoy <- eu %>% 
-        group_by(eunoneu, flow) %>% 
-        mutate(diff = lag(value, n = 12),
-               yoy = percent((value/diff) - 1),
-               amount = money(value*1000)) %>% 
-        arrange(flow, eunoneu) %>% 
-        filter(date == "2021-03-01") %>% 
-        select(flow, eunoneu, amount, yoy)
-
 ```
 
-`r knitr::kable(euyoy)`
 
-
-## By product
 
 ``` {r product}
 
+ffddiv <- divs %>% 
+     left_join(nonresponse) %>% 
+     left_join(divcodes) %>% 
+      mutate(valuetot = replace_na(value + valuenr, 0)) %>% 
+      select(!c(value, valuenr, divcode)) %>%  
+      group_by(flow, divdesc, date) %>% 
+      summarise(valuetot = sum(valuetot))
+
+divyoy <- ffddiv %>%
+  group_by(flow, divdesc) %>% 
+      mutate(diff = lag(valuetot, n = 12),
+               yoy = percent((valuetot/diff) - 1),
+               amount = money(valuetot*1000)) %>% 
+  filter(date == "2021-03-01") %>% 
+  select(flow, divdesc, amount, yoy)
+
+ffddiv %>% 
+  ggplot(aes(x = date, y = valuetot)) +
+  geom_line(aes(colour = flow)) +
+  facet_wrap(~divdesc) +
+  theme_minimal()
+
+```
+
+## By product
+
+`r knitr::kable(divyoy)`
 
 
+
+## Country splits 
+
+``` {r countries}
+
+euirl <- ffdcountry %>% 
+  mutate(euirl = (case_when(eunoneu == "EU" & country == "Irish Republic" ~ "Ireland",
+                            eunoneu == "EU" & country != "Irish Republic" ~ "EU exc RoI",
+                            eunoneu == "Non EU" ~ "RoW"))) %>% 
+        select(date, flow, euirl, country, divdesc, value) %>% 
+        group_by(date, flow, euirl, divdesc) %>% 
+        summarise(value = sum(value))
+
+euirl %>% 
+  filter(flow == "Imports") %>% 
+  ggplot(aes(x = date, y = value)) +
+  geom_line(aes(colour = euirl)) + 
+  facet_wrap(~divdesc) +
+  theme_minimal()
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+## Annex - Non response estimates
+
+Non response does not impact very much on overall trade values.
+
+``` {r nonresponse}
+
+nrdiv <- divs %>% 
+     left_join(nonresponse) %>% 
+      # mutate(valuetot = replace_na(value + valuenr, 0)) %>% 
+      pivot_longer(cols = value:valuenr)
+
+nrdiv %>% 
+  # filter(flow == "Exports") %>% 
+  ggplot(aes(x = date, y = value)) + 
+  geom_bar(aes(fill = name), stat = "identity") +
+  facet_grid(row = ~flow) +
+  theme_minimal()
 
 ```
