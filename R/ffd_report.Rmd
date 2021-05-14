@@ -1,6 +1,14 @@
 ---
-title: "FFD report"
-output: html_document
+title: "Trade in food, feed and drink"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+params:
+  ffddata: "ffd202103.csv"
+  ffdcountrydata: "ffdcountry202103.csv"
+  nrdata: "nonresponse202103.csv"
+  date: "2021-03-01"
 ---
 
 ```{r setup, include=FALSE}
@@ -8,7 +16,9 @@ knitr::opts_chunk$set(
 	echo = FALSE,
 	message = FALSE,
 	warning = FALSE,
-	results = "hide"
+	results = "hide",
+	fig.width = 9,
+	fig.height = 7
 )
 
 library("here")
@@ -26,7 +36,7 @@ source(here("R", "money.R"))
 
 
 # Read in datasets
-ffd <- read.csv(here("data", "raw", "ffd202103.csv"),
+ffd <- read.csv(here("data", "raw", params$ffddata),
                 col.names = c("year", "month", "flow", "divcode", "divdesc", "product", "value", "tonnes")) %>% 
   mutate(date = as.Date(paste(year, month, "1", sep = "-"), format = "%Y-%m-%d")) %>% 
   mutate(flow = case_when(flow == "Total Exports" ~ "Exports",
@@ -34,13 +44,13 @@ ffd <- read.csv(here("data", "raw", "ffd202103.csv"),
   filter(divcode != 22)
 
 
-ffdcountry <- read.csv(here("data", "raw", "ffdcountry202103.csv"),
+ffdcountry <- read.csv(here("data", "raw", params$ffdcountrydata),
                        col.names = c("year", "month", "flow", "eunoneu", "country", "divcode", "divdesc", "value", "tonnes")) %>% 
     mutate(date = as.Date(paste(year, month, "1", sep = "-"), format = "%Y-%m-%d"), 
            flow = case_when(flow == "Total Exports" ~ "Exports",
                           flow == "Total Imports" ~ "Imports"))
 
-nonresponse <- read_csv(here("data", "raw", "nonresponse202103.csv"),
+nonresponse <- read_csv(here("data", "raw", params$nrdata),
                         col_names = c("sitc1",
                                       "sitc2",
                                       "sitc3",
@@ -124,7 +134,17 @@ euyoy <- eu %>%
 
 ```
 
-## Trade in FFD by value
+## Intro
+
+- This pack presents the first provisional estimates of trade data for **`r month(params$date, label = TRUE, abbr = FALSE)` `r year(params$date)`**  and includes revised data from HMRC for previous months. Note that all data from January 2020 onwards is provisional and subject to change. Changes in data collection methods from 1 Jan 2021 mean that care should be taken in the interpretation of changes in trade before and after this date.
+
+- There has been an unusually high level of non-response for EU to GB agrifood imports for `r month(params$date, label = TRUE, abbr = FALSE)` `r year(params$date)`. Estimates to adjust for this non-response are included in the **value** data shown here, as published at an aggregate level by HMRC. HMRC do not publish non-response estimates for volumes.
+
+- Please note that monthly data can fluctuate, and small movements should be treated with caution. 
+
+- We can’t attribute changes in trade to a single cause. The combined effects of COVID-19 national and international lockdown restrictions, EU exit uncertainty and border disruptions have all been contributing factors to the differing nature of recent UK and global trade. These (and other factors) will impact over a longer time period.
+
+## Trade by value
 
 -   __Imports__ in March were **`r yoy %>% filter(date == "2021-03-01", flow == "Imports") %>% mutate(value = value * 1000) %>%  pull(value) %>% money`** which is `r  yoy %>% filter(date == "2021-03-01", flow == "Imports")  %>% pull(yoy) %>% scales::percent()` down on March 2020. Trade has generally recovered from the downturn seen in the first two months of 2021.
 
@@ -132,6 +152,8 @@ euyoy <- eu %>%
 
 Trade has generally recovered from the downturn seen in the first two months of 2021.
 
+
+**Year on year trade comparisons EU/RoW**
 `r knitr::kable(euyoy)`
 
 
@@ -173,6 +195,8 @@ eu %>%
 ```
 
 
+### By product
+
 
 ``` {r product}
 
@@ -195,18 +219,28 @@ divyoy <- ffddiv %>%
 ffddiv %>% 
   ggplot(aes(x = date, y = valuetot)) +
   geom_line(aes(colour = flow)) +
-  facet_wrap(~divdesc) +
-  theme_minimal()
+  facet_grid(rows = vars(divdesc),
+             cols = vars(flow),
+             scales = "free",
+             labeller = label_wrap_gen(width = 30)) +
+  scale_y_continuous(labels = comma) +
+  theme_minimal() +
+  theme(legend.title = element_blank(),
+        strip.text.y = element_text(angle = 0),
+        legend.position = "none") +
+  labs(x = NULL,
+       y = "value",
+       title = "Value of trade, SITC2 level")
 
 ```
 
-## By product
 
+**Value of trade and year on year percentage change**
 `r knitr::kable(divyoy)`
 
 
 
-## Country splits 
+### Country splits 
 
 ``` {r countries}
 
@@ -218,16 +252,61 @@ euirl <- ffdcountry %>%
         group_by(date, flow, euirl, divdesc) %>% 
         summarise(value = sum(value))
 
+
+euirlyoy <- euirl %>% 
+            ungroup() %>% 
+            group_by(divdesc, flow, euirl) %>% 
+            mutate(diff = lag(value, n = 12),
+                   val = money(value),
+                   yoy = percent((value/diff)-1, accuracy = 1)) %>% 
+            filter(date == "2021-03-01") %>% 
+            pivot_wider(names_from = date, values_from = c(val,yoy)) %>% 
+            ungroup() %>% 
+            select(!c(diff, value))
+
+            
+
 euirl %>% 
   filter(flow == "Imports") %>% 
   ggplot(aes(x = date, y = value)) +
   geom_line(aes(colour = euirl)) + 
-  facet_wrap(~divdesc) +
-  theme_minimal()
+  facet_grid(rows = vars(divdesc),
+             cols = vars(euirl),
+             scales = "free",
+             labeller = label_wrap_gen(width = 30)) +
+  scale_y_continuous(labels = comma) +
+  theme_minimal() +
+  theme(legend.title = element_blank(),
+        legend.position = "none",
+        panel.grid.minor = element_blank(),
+        strip.text.y = element_text(angle = 0)) +
+  labs(x = NULL,
+       y = "Value",
+       title = "Value of imports by region")
+
+euirl %>% 
+  filter(flow == "Exports") %>% 
+  ggplot(aes(x = date, y = value)) +
+  geom_line(aes(colour = euirl)) + 
+  facet_grid(rows = vars(divdesc),
+             cols = vars(euirl),
+             scales = "free",
+             labeller = label_wrap_gen(width = 30)) +
+  scale_y_continuous(labels = comma) +
+  theme_minimal() +
+  theme(legend.title = element_blank(),
+        legend.position = "bottom",
+        panel.grid.minor = element_blank(),
+        strip.text.y = element_text(angle = 0)) +
+  labs(x = NULL,
+       y = "Value",
+       title = "Value of exports by region")
 
 
 ```
 
+**Values and year on year change, March 2021** 
+`r knitr::kable(euirlyoy)`
 
 
 
@@ -237,24 +316,316 @@ euirl %>%
 
 
 
+### Non response estimates for values
 
-
-## Annex - Non response estimates
-
-Non response does not impact very much on overall trade values.
+The charts and tables below detail the contribution of non response to overall trade values. Whilst the contribution is generally low, non response estimates for imports have increased markedly since January 2021.  
 
 ``` {r nonresponse}
 
 nrdiv <- divs %>% 
      left_join(nonresponse) %>% 
-      # mutate(valuetot = replace_na(value + valuenr, 0)) %>% 
       pivot_longer(cols = value:valuenr)
 
+# Non repsonse time series line chart
+nonresponse %>% 
+  group_by(flow, date) %>% 
+  summarise(valuenr = sum(valuenr)) %>% 
+  ungroup() %>% 
+  ggplot(aes(x = date, y = valuenr)) +
+  geom_line(aes(colour = flow)) +
+  scale_y_continuous(labels = comma) +
+  theme_minimal() +
+  theme(legend.title = element_blank(),
+        legend.position = c(0.2,0.9),
+        panel.grid.minor = element_blank()) +
+  labs(x = NULL,
+       y = "value",
+       title = "Non response estimated values")
+
+# Non response as proportion of total value bar chart
 nrdiv %>% 
   # filter(flow == "Exports") %>% 
   ggplot(aes(x = date, y = value)) + 
   geom_bar(aes(fill = name), stat = "identity") +
   facet_grid(row = ~flow) +
-  theme_minimal()
+  scale_y_continuous(labels = comma) +
+  scale_fill_discrete(labels = c("reported data", "non response estimate")) +
+  theme_minimal() + 
+  theme(legend.title = element_blank(),
+        legend.position = "bottom",
+        panel.grid.minor = element_blank()) +
+  labs(x = NULL,
+       y = "value",
+       title = "Non response as a proportion of all food and drink")
+
+pcnr <- divs %>% 
+  filter(date >= "2020-12-01",
+         flow == "Imports") %>% 
+  left_join(nonresponse) %>% 
+    left_join(divcodes) %>% 
+  group_by(divdesc, flow, date) %>% 
+  summarise(value = sum(value),
+            valuenr = sum(valuenr)) %>% 
+  mutate(pcnr = percent(valuenr/(value + valuenr), accuracy = 1)) %>% 
+  select(!c(value, valuenr)) %>% 
+    pivot_wider(names_from = date,
+                values_from = pcnr) %>% 
+  left_join(divcodes) %>% 
+  arrange(divcode)
+
+totnr <- divs %>% 
+    filter(date >= "2020-12-01",
+         flow == "Imports") %>% 
+  left_join(nonresponse) %>% 
+    group_by(flow, date) %>% 
+  summarise(value = sum(value),
+            valuenr = sum(valuenr)) %>% 
+  mutate(pcnr = percent(valuenr/(value + valuenr), accuracy = 1)) %>% 
+  select(!c(value, valuenr)) %>% 
+    pivot_wider(names_from = date,
+                values_from = pcnr)
+
 
 ```
+
+**Proportion of EU import value estimates attributed to non-response**
+
+`r knitr::kable(totnr)`
+
+`r knitr::kable(pcnr)`
+
+
+## Trade by volume
+
+### Summary
+
+``` {r vol_summary}
+
+
+divsvol <- ffd %>% 
+  group_by(flow, divcode, date) %>% 
+  summarise(tonnes = sum(tonnes)) %>% 
+  filter(date >= "2018-01-01") %>% 
+  ungroup() %>% 
+  left_join(divcodes) %>% 
+  group_by(flow, divdesc, date) %>% 
+  summarise(tonnes = sum(tonnes)) %>% 
+  ungroup()
+
+
+divsvol %>% 
+  filter(flow == "Imports") %>%
+  ggplot(aes(x = date, y = tonnes)) +
+  geom_line(aes(colour = flow)) +
+  facet_grid(rows = vars(divdesc), 
+             cols = vars(flow),
+             scales = "free",
+             labeller = label_wrap_gen(width = 30)) +
+  scale_y_continuous(labels = comma) +
+  theme_minimal() +
+  theme(legend.title = element_blank(),
+        legend.position = "none",
+        panel.grid.minor = element_blank(),
+        strip.text.y = element_text(angle = 0),
+        strip.text.x = element_blank()) +
+  labs(x = NULL,
+       y = "tonnes",
+       title = "Import volumes by SITC2")
+
+divsvol %>% 
+  filter(flow == "Exports") %>% 
+  ggplot(aes(x = date, y = tonnes)) +
+  geom_line(aes(colour = flow)) +
+  facet_grid(rows = vars(divdesc), cols = vars(flow),
+             scales = "free",
+             labeller = label_wrap_gen(width = 30)) +
+  scale_y_continuous(labels = comma) +
+  theme_minimal() +
+  theme(legend.title = element_blank(),
+        legend.position = "none",
+        panel.grid.minor = element_blank(),
+        strip.text.y = element_text(angle = 0),
+        strip.text.x = element_blank()) +
+  labs(x = NULL,
+       y = "tonnes",
+       title = "Export volumes by SITC2")
+
+
+```
+
+
+The following detailed charts include an assessment of a threshold for anomalous values in the volume data. The methodology is described at the end of this document. Essentially the thresholds are ranges which describe unusually high or low month on month changes in the volume of trade, based on historic movements in the time series. This is the approach used to derive 'escalation ranges' for risk ratings in recent emergency response dashboards.
+
+
+``` {r }
+
+# # Summarise by div
+# ffd <- ffd %>%
+#         group_by(year, month, flow, divdesc) %>%
+#         summarise(value = sum(value),
+#                   tonnes = sum(tonnes)) %>%
+#         rename(product = divdesc)
+
+
+# Value data setup -------------------------------------------------------------
+# Create thresholds
+trade_val <- ffd %>% 
+  mutate(date = as.Date(paste(year, month, "1", sep = "-"), format = "%Y-%m-%d")) %>% 
+  group_by(product, flow) %>% 
+  mutate(diff = value - lag(value),
+         limupper = quantile(diff, 0.75, na.rm = TRUE) + (quantile(diff, 0.75, na.rm = TRUE) - quantile(diff, 0.25, na.rm = TRUE)) * 1.5,
+         limupperub = limupper * 1.05,
+         limupperlb = limupper * 0.95,
+         limlower = quantile(diff, 0.25, na.rm = TRUE) - (quantile(diff, 0.75, na.rm = TRUE) - quantile(diff, 0.25, na.rm = TRUE)) * 1.5,
+         limlowerub = limlower * 1.05,
+         limlowerlb = limlower * 0.95)
+
+# Nested for charting
+trade_nest_val <- trade_val %>% 
+                      ungroup() %>% 
+                      group_by(flow, product) %>%
+                      nest()
+
+# Volume data setup ------------------------------------------------------------
+trade_vol <- ffd %>% 
+  mutate(date = as.Date(paste(year, month, "1", sep = "-"), format = "%Y-%m-%d")) %>% 
+  group_by(product, flow) %>% 
+  mutate(diff = tonnes - lag(tonnes),
+         limupper = quantile(diff, 0.75, na.rm = TRUE) + (quantile(diff, 0.75, na.rm = TRUE) - quantile(diff, 0.25, na.rm = TRUE)) * 1.5,
+         limupperub = limupper * 1.05,
+         limupperlb = limupper * 0.95,
+         limlower = quantile(diff, 0.25, na.rm = TRUE) - (quantile(diff, 0.75, na.rm = TRUE) - quantile(diff, 0.25, na.rm = TRUE)) * 1.5,
+         limlowerub = limlower * 1.05,
+         limlowerlb = limlower * 0.95)
+
+# Nested for charting
+trade_nest_vol <- trade_vol %>% 
+                      ungroup() %>% 
+                      group_by(flow, product) %>%
+                      nest()
+
+
+# every FFD code
+selected <- unique(ffd$product)
+# selected <- c("Beer", "Cheese")
+
+
+```
+
+```{r chart_functions}
+
+threshold_plot <- function(data){
+  data %>% 
+    ggplot() +
+    geom_line(aes(x = date, y = diff), colour = "blue", size = 0.5) +
+    geom_point(aes(x = date, y = diff), colour = "blue", size = 0.5) +
+    geom_line(aes(x = date, y = limupper), colour = "cyan4", size = 3, alpha = 0.25) +
+    geom_line(aes(x = date, y = limlower), colour = "cyan4", size = 3, alpha = 0.25) +
+    scale_x_date(date_breaks = "1 year", date_labels = "%Y") +
+    scale_y_continuous(labels = comma) +
+    labs(x = NULL,
+         y = NULL,
+         subtitle = "Thresholds") +
+    theme_minimal() +
+    theme(panel.grid.minor = element_blank())
+    # facet_wrap(~ product, scales = "free")
+  
+}
+
+
+
+value_plot <- function(data){
+  data %>% 
+    ggplot() +
+    geom_line(aes(x = date, y = value), colour = "blue", size = 0.5) +
+    geom_point(aes(x = date, y = value), colour = "blue", size = 0.5) +
+    scale_x_date(date_breaks = "1 year", date_labels = "%Y") +
+    scale_y_continuous(labels = comma) +
+    labs(x = NULL,
+         y = "£000s",
+         subtitle = "Trade value") +
+    theme_minimal() +
+    theme(panel.grid.minor = element_blank())
+    # facet_wrap(~ product, scales = "free")
+  
+}
+
+volume_plot <- function(data){
+  data %>% 
+    ggplot() +
+    geom_line(aes(x = date, y = tonnes), colour = "blue", size = 0.5) +
+    geom_point(aes(x = date, y = tonnes), colour = "blue", size = 0.5) +
+    scale_x_date(date_breaks = "1 year", date_labels = "%Y") +
+    scale_y_continuous(labels = comma) +
+    labs(x = NULL,
+         y = "tonnes",
+         subtitle = "Trade volume") +
+    theme_minimal() +
+    theme(panel.grid.minor = element_blank())
+    # facet_wrap(~ product, scales = "free")
+  
+}
+
+
+plot_list <- function(cht1, cht2, title, subtitle){
+  (cht1 / cht2) +
+    plot_annotation(title = title,
+                    subtitle = subtitle)
+  
+}
+
+```
+
+
+### Products {.tabset .tabset-pills}
+
+#### Imports
+
+```{r import_volume}
+
+diff <- trade_nest_vol %>% 
+        filter(flow == "Imports") %>%
+        filter(product %in% selected) %>%
+        mutate(tchart = pmap(list(data = data), threshold_plot),
+               vchart = pmap(list(data = data), volume_plot),
+               charts = pmap(list(cht1 = vchart, cht2 = tchart, title = product, subtitle = flow), plot_list)) 
+
+diff$charts
+
+```
+
+
+#### Exports
+
+```{r export_volume}
+diff <- trade_nest_vol %>% 
+        filter(flow == "Exports") %>% 
+        filter(product %in% selected) %>%
+        mutate(tchart = pmap(list(data = data), threshold_plot),
+               vchart = pmap(list(data = data), volume_plot),
+               charts = pmap(list(cht1 = vchart, cht2 = tchart, title = product, subtitle = flow), plot_list)) 
+
+diff$charts
+```
+
+
+## Threshold Methodology
+
+For each series the method for deriving an 'escalation range' was as follows:
+
+1.	Convert data into a time series
+2.	Determine how many first differences[^1]  and seasonal differences[^2]  need to be taken to make the time series stationary (constant statistical properties over time) using the ndiffs() and nsdiffs() functions from the forecast package in R
+3.	Carry out the required differencing using the diff() function from the forecast package in R
+4.	Using the data points in this stationary time series, find the threshold for outliers
+5.	Look at +/-5% of this threshold to get an escalation range which allows for some uncertainty
+6.	Sense check the escalation range by considering which past events would have warranted escalation given the derived range
+
+The main assumptions behind this method are:
+
+-	Past indicator data is useful to informing current escalation decisions
+-	The differences of a time series can be used to detect crises related to the original time series. Specifically jumps, 
+kinks, spikes etc… are not distinguished between in difference time series therefore the assumption is that all of these events should be identified by the escalation range.
+
+
+[^1]: Taking the first difference of a time series means converting it to a time series of the differences between adjacent observations in the original time series.
+[^2]: Taking the seasonal difference of a time series means converting it to a time series of the changes from one season to the next in the original time series.
