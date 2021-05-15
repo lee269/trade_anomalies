@@ -1,0 +1,224 @@
+---
+title: "Trade in food, feed and drink (quarterly)"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+params:
+  ffddata: "ffd202103.csv"
+  ffdcountrydata: "ffdcountry202103.csv"
+  nrdata: "nonresponse202103.csv"
+  date: "2021-03-01"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  message = FALSE,
+  warning = FALSE,
+  results = "hide",
+  fig.width = 9,
+  fig.height = 7
+)
+
+library("here")
+library("dplyr")
+library("ggplot2")
+library("purrr")
+library("tidyr")
+library("patchwork")
+library("stringr")
+library("readr")
+library("lubridate")
+library("scales")
+library("zoo")
+
+source(here("R", "money.R"))
+
+
+# Read in datasets ------------------------------------------------------------
+
+ffd <- read.csv(here("data", "raw", params$ffddata),
+                col.names = c("year", "month", "flow", "divcode", "divdesc", "product", "value", "tonnes")) %>% 
+  mutate(date = as.Date(paste(year, month, "1", sep = "-"), format = "%Y-%m-%d"),
+         quarter = zoo::as.yearqtr(date),
+         flow = case_when(flow == "Total Exports" ~ "Exports",
+                          flow == "Total Imports" ~ "Imports")) %>% 
+  filter(divcode != 22)
+
+
+ffdcountry <- read.csv(here("data", "raw", params$ffdcountrydata),
+                       col.names = c("year", "month", "flow", "eunoneu", "country", "divcode", "divdesc", "value", "tonnes")) %>% 
+  mutate(date = as.Date(paste(year, month, "1", sep = "-"), format = "%Y-%m-%d"), 
+         quarter = zoo::as.yearqtr(date),
+         flow = case_when(flow == "Total Exports" ~ "Exports",
+                          flow == "Total Imports" ~ "Imports"))
+
+nonresponse <- read_csv(here("data", "raw", params$nrdata),
+                        col_names = c("sitc1",
+                                      "sitc2",
+                                      "sitc3",
+                                      "sitc4",
+                                      "sitc5",
+                                      "flow",
+                                      "year",
+                                      "month",
+                                      "include",
+                                      "value_sterling"),
+                        skip = 1) %>% 
+  select(!(sitc3:sitc5)) %>% 
+  mutate(date = ymd(paste(year, month, "1", sep = "-")),
+         quarter = zoo::as.yearqtr(date),
+         flow = case_when(flow == "EU - Exports" ~ "Exports",
+                          flow == "EU - Imports" ~ "Imports"),
+         divcode = case_when(str_starts(sitc2, "00") ~ 0,
+                             str_starts(sitc2, "01") ~ 1,
+                             str_starts(sitc2, "02") ~ 2,
+                             str_starts(sitc2, "03") ~ 3,
+                             str_starts(sitc2, "04") ~ 4,
+                             str_starts(sitc2, "05") ~ 5,
+                             str_starts(sitc2, "06") ~ 6,
+                             str_starts(sitc2, "07") ~ 7,
+                             str_starts(sitc2, "08") ~ 8,
+                             str_starts(sitc2, "09") ~ 9,
+                             str_starts(sitc2, "11") ~ 11,
+                             str_starts(sitc2, "22") ~ 22,
+                             str_starts(sitc2, "41") ~ 41,
+                             str_starts(sitc2, "42") ~ 42,
+                             str_starts(sitc2, "43") ~ 43),
+         valuenr = value_sterling /1000) %>% 
+  select(date, quarter, flow, divcode, valuenr) %>% 
+  filter(divcode != 0)
+
+divcodes <- read.csv(here("data", "tidy", "divcodes.csv"))
+
+# Useful things -------------------------------------------------------------
+
+chart_theme <- theme_minimal() +
+              theme(panel.grid.minor = element_blank(),
+                    legend.title = element_blank(),
+                    axis.title.x = element_blank())
+
+
+
+```
+
+
+## Summary
+
+```{r quarters}
+
+# FFD totals -----------------------------------------------------------------
+# FFD by div
+divs <- ffd %>% 
+  filter(date >= "2018-01-01") %>% 
+  group_by(flow, divcode, quarter) %>% 
+  summarise(value = sum(value)) %>% 
+  ungroup()
+
+nrqtr <- nonresponse %>% 
+      group_by(flow, divcode, quarter) %>% 
+      summarise(valuenr = sum(valuenr)) %>% 
+      ungroup()
+
+# Join with nonresponse
+ffdall <- divs %>% 
+     left_join(nrqtr) %>% 
+      mutate(valuetot = replace_na(value + valuenr, 0)) %>% 
+      group_by(quarter, flow) %>% 
+      summarise(value = sum(valuetot)) %>% 
+      ungroup()
+
+# Get year on year %ages
+yoy <- ffdall %>%
+      group_by(flow) %>%
+      mutate(diff = lag(value, n = 4, order_by = quarter),
+             yoy = (value/diff)-1) %>%
+      arrange(flow)
+
+# EU split --------------------------------------------------------------------
+# No accounting for nonresponse here
+eu <- ffdcountry %>% 
+        select(quarter, flow, eunoneu, country, divcode, divdesc, value) %>% 
+        group_by(quarter, flow, eunoneu) %>% 
+        summarise(value = sum(value))
+
+euyoy <- eu %>% 
+        group_by(eunoneu, flow) %>% 
+        mutate(diff = lag(value, n = 4),
+               yoy = percent((value/diff) - 1),
+               amount = money(value*1000)) %>% 
+        arrange(flow, eunoneu) %>% 
+        # filter(date == "2021-03-01") %>% 
+        select(flow, eunoneu, amount, yoy)
+
+ffdall %>% 
+  ggplot(aes(x = quarter, y = value)) +
+  geom_line(aes(colour = flow)) +
+  scale_y_continuous(label = comma) +
+  zoo::scale_x_yearqtr(format = "%Y Q%q",
+                       breaks = seq(from = min(ffdall$quarter),
+                                    to = max(ffdall$quarter),
+                                    by = 1)) +
+  chart_theme
+
+eu %>% 
+  ggplot(aes(x = quarter, y = value)) +
+  geom_line(aes(colour = eunoneu)) +
+  facet_grid(rows = vars(flow)) +
+  scale_y_continuous(label = comma) +
+  zoo::scale_x_yearqtr(format = "%Y Q%q",
+                       breaks = seq(from = min(eu$quarter),
+                                    to = max(eu$quarter),
+                                    by = 1)) +
+  chart_theme
+  
+
+
+```
+
+
+## Products
+
+``` {r product}
+
+ffddiv <- divs %>% 
+     left_join(nonresponse) %>% 
+     left_join(divcodes) %>% 
+      mutate(valuetot = replace_na(value + valuenr, 0)) %>% 
+      select(!c(value, valuenr, divcode)) %>%  
+      group_by(flow, divdesc, quarter) %>% 
+      summarise(valuetot = sum(valuetot))
+
+divyoy <- ffddiv %>%
+  group_by(flow, divdesc) %>% 
+      mutate(diff = lag(valuetot, n = 4),
+               yoy = percent((valuetot/diff) - 1),
+               amount = money(valuetot*1000)) %>% 
+  # filter(date == "2021-03-01") %>% 
+  select(flow, divdesc, amount, yoy)
+
+ffddiv %>% 
+  ggplot(aes(x = quarter, y = valuetot)) +
+  geom_line(aes(colour = flow)) +
+  facet_grid(rows = vars(divdesc),
+             cols = vars(flow),
+             scales = "free",
+             labeller = label_wrap_gen(width = 30)) +
+  scale_y_continuous(labels = comma) +
+  scale_x_yearqtr(format = "%Y Q%q",
+                       breaks = seq(from = min(eu$quarter),
+                                    to = max(eu$quarter),
+                                    by = 1)) +
+  theme_minimal() +
+  theme(legend.title = element_blank(),
+        strip.text.y = element_text(angle = 0),
+        legend.position = "none") +
+  labs(x = NULL,
+       y = "value",
+       title = "Value of trade, SITC2 level")
+
+```
+
+
+
