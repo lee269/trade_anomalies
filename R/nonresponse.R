@@ -6,7 +6,8 @@ library(ggplot2)
 
 # url for non response data
 # https://www.uktradeinfo.com/trade-data/ots-custom-table/ 
-# ?id=35222291-0b7b-4309-af60-7bd2df3417e5
+# ?id=35222291-0b7b-4309-af60-7bd2df3417e5 - old link exc div 22
+# ?id=cdee0450-14b3-4e26-bed5-16e2e23b105a
 
 # Read in data
 nonresponse <- read_csv(here("data", "raw", "nonresponse.csv"),

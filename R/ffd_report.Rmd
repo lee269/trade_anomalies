@@ -40,8 +40,8 @@ ffd <- read.csv(here("data", "raw", params$ffddata),
                 col.names = c("year", "month", "flow", "divcode", "divdesc", "product", "value", "tonnes")) %>% 
   mutate(date = as.Date(paste(year, month, "1", sep = "-"), format = "%Y-%m-%d")) %>% 
   mutate(flow = case_when(flow == "Total Exports" ~ "Exports",
-                          flow == "Total Imports" ~ "Imports")) %>% 
-  filter(divcode != 22)
+                          flow == "Total Imports" ~ "Imports")) 
+  # filter(divcode != 22)
 
 
 ffdcountry <- read.csv(here("data", "raw", params$ffdcountrydata),
@@ -66,6 +66,7 @@ nonresponse <- read_csv(here("data", "raw", params$nrdata),
   mutate(date = ymd(paste(year, month, "1", sep = "-")),
          flow = case_when(flow == "EU - Exports" ~ "Exports",
                           flow == "EU - Imports" ~ "Imports"),
+         eunoneu = "EU",
          divcode = case_when(str_starts(sitc2, "00") ~ 0,
                              str_starts(sitc2, "01") ~ 1,
                              str_starts(sitc2, "02") ~ 2,
@@ -82,7 +83,7 @@ nonresponse <- read_csv(here("data", "raw", params$nrdata),
                              str_starts(sitc2, "42") ~ 42,
                              str_starts(sitc2, "43") ~ 43),
          valuenr = value_sterling /1000) %>% 
-         select(date, flow, divcode, valuenr) %>% 
+         select(date, eunoneu, flow, divcode, valuenr) %>% 
          filter(divcode != 0)
 
 divcodes <- read.csv(here("data", "tidy", "divcodes.csv"))
@@ -116,10 +117,21 @@ yoy <- ffdall %>%
       arrange(flow)
 
 # EU split --------------------------------------------------------------------
+
+eunr <- nonresponse %>% 
+        group_by(date, flow, eunoneu) %>% 
+        summarise(value = sum(valuenr))
+
 eu <- ffdcountry %>% 
+        # left_join(nonresponse) %>% 
         select(date, flow, eunoneu, country, divcode, divdesc, value) %>% 
         group_by(date, flow, eunoneu) %>% 
-        summarise(value = sum(value))
+        summarise(value = sum(value)) %>% 
+        rbind(eunr) %>% 
+        group_by(date, flow, eunoneu) %>% 
+        summarise(value = sum(value)) %>% 
+        ungroup()
+
 
 euyoy <- eu %>% 
         group_by(eunoneu, flow) %>% 
@@ -368,7 +380,7 @@ The charts and tables below detail the contribution of non response to overall t
 
 nrdiv <- divs %>% 
      left_join(nonresponse) %>% 
-      pivot_longer(cols = value:valuenr)
+      pivot_longer(cols = c(value,valuenr))
 
 # Non repsonse time series line chart
 nonresponse %>% 
