@@ -165,6 +165,7 @@ euyoy <- eu %>%
 Trade has generally recovered from the downturn seen in the first two months of 2021.
 
 
+
 **Year on year trade comparisons EU/RoW**
 `r knitr::kable(euyoy)`
 
