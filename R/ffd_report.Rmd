@@ -139,8 +139,9 @@ euyoy <- eu %>%
                yoy = percent((value/diff) - 1),
                amount = money(value*1000)) %>% 
         arrange(flow, eunoneu) %>% 
-        filter(date == "2021-03-01") %>% 
-        select(flow, eunoneu, amount, yoy)
+        filter(date >= "2021-01-01") %>% 
+        select(date, flow, eunoneu, amount, yoy) %>% 
+        pivot_wider(names_from = date, values_from = c(amount, yoy))
 
 
 
@@ -214,12 +215,15 @@ eu %>%
 
 # Matt suggestion
 eu %>% 
+  filter(date >= "2019-01-01") %>% 
   mutate(x = paste(eunoneu, "-", flow)) %>% 
   ggplot(aes(x = date, y = value)) +
   geom_line(aes(colour = x)) +
     theme_minimal() +
-    theme(legend.title = element_blank()) +
+    theme(legend.title = element_blank(),
+          panel.grid.minor = element_blank()) +
   scale_y_continuous(labels = comma) +
+  scale_x_date(date_labels = "%Y %b") +
   labs(x = NULL,
        y = "£000s",
        title = "Value of trade, EU/Non EU")
@@ -250,7 +254,8 @@ divyoy <- ffddiv %>%
   filter(date == "2021-03-01") %>% 
   select(flow, divdesc, amount, yoy)
 
-ffddiv %>% 
+ffddiv %>%
+  filter(date >= "2020-01-01") %>% 
   ggplot(aes(x = date, y = valuetot)) +
   geom_line(aes(colour = flow)) +
   facet_grid(rows = vars(divdesc),
@@ -258,10 +263,32 @@ ffddiv %>%
              scales = "free",
              labeller = label_wrap_gen(width = 30)) +
   scale_y_continuous(labels = comma) +
+  scale_x_date(date_labels = "%Y \n %b") +
   theme_minimal() +
   theme(legend.title = element_blank(),
         strip.text.y = element_text(angle = 0),
         legend.position = "none") +
+  labs(x = NULL,
+       y = "value",
+       title = "Value of trade, SITC2 level")
+
+
+# Matt suggestion
+ffddiv %>%
+  filter(date >= "2020-01-01") %>% 
+  ggplot(aes(x = date, y = valuetot)) +
+  geom_line(aes(colour = flow)) +
+  facet_wrap(vars(divdesc),
+             scales = "fixed",
+             labeller = label_wrap_gen(width = 20)) +
+  scale_y_continuous(labels = comma) +
+  scale_x_date(date_labels = "%y \n %b") +
+  theme_minimal() +
+  theme(legend.title = element_blank(),
+        legend.position = "bottom",
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(fill = "gray99", linetype = 0)
+        ) +
   labs(x = NULL,
        y = "value",
        title = "Value of trade, SITC2 level")
@@ -279,13 +306,36 @@ divyoy2 %>%
   filter(flow == "Exports") %>% 
   ggplot(aes(x = date, y = yoy)) +
   geom_bar(aes(fill = flow), stat = "identity", position = "dodge") +
-  facet_wrap(~divdesc) +
+  facet_wrap(vars(divdesc), labeller = label_wrap_gen(width = 20)) +
   scale_y_continuous(labels = percent) +
   theme_minimal() +
   theme(legend.title = element_blank(),
+        legend.position = "none",
         panel.grid.minor = element_blank(),
         panel.grid.major = element_blank(),
-        strip.text.y = element_text(angle = 0)) 
+        panel.background = element_rect(fill = "gray97", linetype = 0),
+        panel.border = element_blank()) +
+  labs(x = NULL,
+       y = NULL,
+       title = "Year on year change in value of exports, 2021")
+
+divyoy2 %>% 
+  filter(flow == "Imports") %>% 
+  ggplot(aes(x = date, y = yoy)) +
+  geom_bar(aes(fill = flow), stat = "identity", position = "dodge") +
+  facet_wrap(vars(divdesc), labeller = label_wrap_gen(width = 20)) +
+  scale_y_continuous(labels = percent) +
+  theme_minimal() +
+  theme(legend.title = element_blank(),
+        legend.position = "none",
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.background = element_rect(fill = "gray97", linetype = 0),
+        panel.border = element_blank()) +
+  labs(x = NULL,
+       y = NULL,
+       title = "Year on year change in value of imports, 2021")
+
 
 ```
 
@@ -341,7 +391,7 @@ euirl %>%
 
  
 euirl %>% 
-  filter(flow == "Imports") %>% 
+  filter(flow == "Imports", date >= "2020-01-01") %>% 
   ggplot(aes(x = date, y = value)) +
   geom_line(aes(colour = euirl)) + 
   facet_grid(rows = vars(divdesc),
@@ -349,6 +399,7 @@ euirl %>%
              scales = "free",
              labeller = label_wrap_gen(width = 30)) +
   scale_y_continuous(labels = comma) +
+  scale_x_date(date_labels = "%y \n %b") +
   theme_minimal() +
   theme(legend.title = element_blank(),
         legend.position = "none",
@@ -359,7 +410,7 @@ euirl %>%
        title = "Value of imports by region")
 
 euirl %>% 
-  filter(flow == "Exports") %>% 
+  filter(flow == "Exports", date >= "2020-01-01") %>% 
   ggplot(aes(x = date, y = value)) +
   geom_line(aes(colour = euirl)) + 
   facet_grid(rows = vars(divdesc),
@@ -367,6 +418,7 @@ euirl %>%
              scales = "free",
              labeller = label_wrap_gen(width = 30)) +
   scale_y_continuous(labels = comma) +
+  scale_x_date(date_labels = "%y \n %b") +
   theme_minimal() +
   theme(legend.title = element_blank(),
         legend.position = "bottom",
@@ -380,6 +432,7 @@ euirl %>%
 ```
 ``` {r}
 
+# Matt - add back RoW
 euirl %>%            
             ungroup() %>% 
             group_by(divdesc, flow, euirl) %>% 
@@ -387,8 +440,7 @@ euirl %>%
                    val = money(value),
                    yoyval = value - diff,
                    yoypc = percent((value/diff)-1, accuracy = 1)) %>% 
-            filter(date == "2021-03-01", 
-                   euirl != "RoW") %>%
+            filter(date == "2021-03-01") %>%
             ggplot(aes(x = flow, y = yoyval, group = euirl)) +
             geom_bar(aes(fill = euirl), stat = "identity") +
             facet_wrap(vars(divdesc), scales = "free", labeller = label_wrap_gen(width = 20)) +
@@ -401,6 +453,57 @@ euirl %>%
             labs(x = NULL,
                  y = "value",
                  title = "Year on year change in trade values, EU")
+
+
+
+euirl %>%            
+            ungroup() %>% 
+            filter(flow == "Exports") %>% 
+            group_by(divdesc, flow, euirl) %>% 
+            mutate(diff = lag(value, n = 12),
+                   val = money(value),
+                   yoyval = value - diff,
+                   yoypc = percent((value/diff)-1, accuracy = 1)) %>% 
+            filter(date == "2021-03-01") %>%
+            ggplot(aes(x = divdesc, y = yoyval, group = euirl)) +
+            geom_bar(aes(fill = euirl), stat = "identity") +
+            # facet_grid(cols = vars(divdesc), scales = "free", labeller = label_wrap_gen(width = 20)) +
+            scale_y_continuous(labels = comma) +
+            scale_x_discrete(labels = function (x) str_wrap(x, width = 30)) +
+            coord_flip() +
+            theme_minimal() +
+            theme(panel.grid.minor = element_blank(),
+                  legend.title = element_blank(),
+                  legend.position = "bottom",
+                  strip.text.y = element_text(angle = 0)) +
+            labs(x = NULL,
+                 y = "value",
+                 title = "Year on year change in export values, March 2021")
+
+euirl %>%            
+            ungroup() %>% 
+            filter(flow == "Imports") %>% 
+            group_by(divdesc, flow, euirl) %>% 
+            mutate(diff = lag(value, n = 12),
+                   val = money(value),
+                   yoyval = value - diff,
+                   yoypc = percent((value/diff)-1, accuracy = 1)) %>% 
+            filter(date == "2021-03-01") %>%
+            ggplot(aes(x = divdesc, y = yoyval, group = euirl)) +
+            geom_bar(aes(fill = euirl), stat = "identity") +
+            # facet_grid(cols = vars(divdesc), scales = "free", labeller = label_wrap_gen(width = 20)) +
+            scale_y_continuous(labels = comma) +
+            scale_x_discrete(labels = function (x) str_wrap(x, width = 30)) +
+            coord_flip() +
+            theme_minimal() +
+            theme(panel.grid.minor = element_blank(),
+                  legend.title = element_blank(),
+                  legend.position = "bottom",
+                  strip.text.y = element_text(angle = 0)) +
+            labs(x = NULL,
+                 y = "value",
+                 title = "Year on year change in import values, March 2021")
+
 
 
 ```
