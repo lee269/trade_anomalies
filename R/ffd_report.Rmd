@@ -212,6 +212,20 @@ eu %>%
        y = "£000s",
        title = "Value of trade, EU/Non EU")
 
+# Matt suggestion
+eu %>% 
+  mutate(x = paste(eunoneu, "-", flow)) %>% 
+  ggplot(aes(x = date, y = value)) +
+  geom_line(aes(colour = x)) +
+    theme_minimal() +
+    theme(legend.title = element_blank()) +
+  scale_y_continuous(labels = comma) +
+  labs(x = NULL,
+       y = "£000s",
+       title = "Value of trade, EU/Non EU")
+
+
+
 ```
 
 
@@ -251,6 +265,27 @@ ffddiv %>%
   labs(x = NULL,
        y = "value",
        title = "Value of trade, SITC2 level")
+
+# Matt suggestion
+divyoy2 <- ffddiv %>%
+  group_by(flow, divdesc) %>% 
+      mutate(diff = lag(valuetot, n = 12),
+               yoy = (valuetot/diff) - 1,
+               amount = money(valuetot*1000)) %>% 
+  filter(date >= "2021-01-01") %>% 
+  select(date, flow, divdesc, amount, yoy)
+
+divyoy2 %>% 
+  filter(flow == "Exports") %>% 
+  ggplot(aes(x = date, y = yoy)) +
+  geom_bar(aes(fill = flow), stat = "identity", position = "dodge") +
+  facet_wrap(~divdesc) +
+  scale_y_continuous(labels = percent) +
+  theme_minimal() +
+  theme(legend.title = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_blank(),
+        strip.text.y = element_text(angle = 0)) 
 
 ```
 
