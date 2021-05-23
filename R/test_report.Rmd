@@ -580,6 +580,45 @@ reactable(euirlyoy)
 
 ```
 
+### David K addition
+
+``` {r david_kennedy}
+
+euirlpc <- euirl %>%
+  filter(eunoneu == "EU") %>% 
+  group_by(date,flow, eunoneu, divdesc) %>% 
+  mutate(pc = value/sum(value))
+
+euirlpc %>% 
+  filter(flow == "Exports", date >= "2020-01-01") %>% 
+  ggplot(aes(x = date, y = pc)) +
+  geom_col(aes(fill = euirl), position = "stack", stat = "identity") +
+  facet_wrap(~divdesc) +
+  theme_minimal()
+
+valdiffs <- euirl %>% 
+            filter(date >= "2019-01-01") %>% 
+            group_by(divdesc, flow, euirl) %>% 
+            mutate(diff = lag(value, n = 12),
+                   valuediff = value - diff) %>% 
+            ungroup()
+
+valdiffs %>% 
+  filter(date >= "2021-01-01", flow == "Exports", euirl != "RoW") %>% 
+  ggplot(aes(x = date, y = valuediff)) +
+  geom_bar(aes(fill = euirl), stat = "identity") +
+  facet_wrap(~divdesc, labeller = label_wrap_gen()) +
+  scale_y_continuous(labels = label_comma(scale = 0.000001, prefix = "£", suffix = "m")) +
+  scale_fill_brewer(palette = chart_palette) +
+  theme_minimal() +
+  theme(legend.title = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.background = element_rect(fill = "gray97", linetype = 0),
+        panel.border = element_blank())
+
+```
+
 ### Non response estimates for values
 
 The charts and tables below detail the contribution of non response to overall trade values. Whilst the contribution is generally low, non response estimates for imports have increased markedly since January 2021.
