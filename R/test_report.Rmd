@@ -1,14 +1,15 @@
 ---
 title: "Trade in food, feed and drink"
-output: 
+always_allow_html: true
+output:
   html_document:
-    toc: true
-    toc_float: true
+    toc: yes
+    toc_float: yes
 params:
-  ffddata: "ffd202103.csv"
-  ffdcountrydata: "ffdcountry202103.csv"
-  nrdata: "nonresponse202103.csv"
-  date: "2021-03-01"
+  ffddata: ffd202103.csv
+  ffdcountrydata: ffdcountry202103.csv
+  nrdata: nonresponse202103.csv
+  date: '2021-03-01'
 ---
 
 ```{r setup, include=FALSE}
@@ -36,7 +37,7 @@ library("reactable")
 source(here("R", "money.R"))
 
 # chart chunks
-chart_palette <- "Dark2"
+chart_palette <- "Set2"
 
 theme <-   theme_minimal() +
            theme(legend.title = element_blank(),
@@ -584,6 +585,7 @@ reactable(euirlyoy)
 
 ``` {r david_kennedy}
 
+# %ages
 euirlpc <- euirl %>%
   filter(eunoneu == "EU") %>% 
   group_by(date,flow, eunoneu, divdesc) %>% 
@@ -593,9 +595,26 @@ euirlpc %>%
   filter(flow == "Exports", date >= "2020-01-01") %>% 
   ggplot(aes(x = date, y = pc)) +
   geom_col(aes(fill = euirl), position = "stack", stat = "identity") +
-  facet_wrap(~divdesc) +
-  theme_minimal()
+  scale_x_date(date_labels = "%Y\n%b") +
+  scale_y_continuous(labels = percent) +
+  scale_fill_brewer(palette = chart_palette, direction = -1) +
+  facet_wrap(~divdesc, labeller = label_wrap_gen()) +
+  theme_minimal() +
+  theme(legend.title = element_blank()) +
+  labs(x = NULL,
+       y = NULL,
+       title = "Proportion of EU export values to Ireland, 2020-2021")
 
+euirlpc %>% 
+    filter(flow == "Exports", date >= "2020-01-01") %>% 
+    mutate(pc = percent(pc)) %>% 
+    select(!c(value)) %>% 
+    pivot_wider(names_from = date, values_from = pc) %>% 
+    arrange(divdesc, euirl) %>% 
+    knitr::kable()
+
+
+# values
 valdiffs <- euirl %>% 
             filter(date >= "2019-01-01") %>% 
             group_by(divdesc, flow, euirl) %>% 
@@ -609,13 +628,28 @@ valdiffs %>%
   geom_bar(aes(fill = euirl), stat = "identity") +
   facet_wrap(~divdesc, labeller = label_wrap_gen()) +
   scale_y_continuous(labels = label_comma(scale = 0.000001, prefix = "£", suffix = "m")) +
-  scale_fill_brewer(palette = chart_palette) +
+  scale_fill_brewer(palette = chart_palette, direction = -1) +
   theme_minimal() +
   theme(legend.title = element_blank(),
         panel.grid.minor = element_blank(),
         panel.grid.major = element_blank(),
         panel.background = element_rect(fill = "gray97", linetype = 0),
-        panel.border = element_blank())
+        panel.border = element_blank()) +
+  labs(x = NULL,
+       y = NULL,
+       title = "Year on year change in export values, EU/Ireland 2021")
+
+valdiffs %>% 
+    filter(date >= "2021-01-01", flow == "Exports", euirl != "RoW") %>% 
+    select(!c(value, diff)) %>% 
+    mutate(valuediff = money(valuediff)) %>% 
+    pivot_wider(names_from = date, values_from = valuediff) %>% 
+    arrange(divdesc, euirl) %>%   
+    knitr::kable()
+
+
+
+
 
 ```
 

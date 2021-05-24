@@ -110,7 +110,7 @@ chart_theme <- theme_minimal() +
 
 ```{r quarters}
 
-'\u2718
+
 # FFD totals -----------------------------------------------------------------
 # FFD by div
 divs <- ffd %>% 
