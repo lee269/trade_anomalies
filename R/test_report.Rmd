@@ -247,7 +247,8 @@ euirlyoy <- euirl %>%
 
 Trade has generally recovered from the downturn seen in the first two months of 2021.
 
-**Year on year trade comparisons EU/RoW**
+
+**Year on year trade comparisons EU/RoW (inc NR)**
 
 ``` {r eu_yoy_table}
 
@@ -276,7 +277,7 @@ ffdall %>%
   theme +
   labs(x = NULL,
        y = NULL,
-       title = "Value of trade in food, feed and drink")
+       title = "Value of trade in food, feed and drink (inc NR)")
 
 # yoy %>% 
 #   ggplot(aes(x = date, y = yoy)) +
@@ -300,21 +301,21 @@ eu %>%
   theme +
   labs(x = NULL,
        y = NULL,
-       title = "Value of trade, EU/Non EU")
+       title = "Value of trade, EU/Non EU (inc NR)")
 
 # Matt suggestion
-eu %>% 
-  filter(date >= "2019-01-01") %>% 
-  mutate(x = paste(eunoneu, "-", flow)) %>% 
-  ggplot(aes(x = date, y = value)) +
-  geom_line(aes(colour = x)) +
-  scale_y_continuous(labels = label_comma(scale = 0.000000001, prefix = "£", suffix = "bn")) +
-  scale_x_date(date_labels = "%Y %b") +
-  scale_colour_brewer(palette = chart_palette) +
-  theme +
-  labs(x = NULL,
-       y = NULL,
-       title = "Value of trade, EU/Non EU")
+# eu %>% 
+#   filter(date >= "2019-01-01") %>% 
+#   mutate(x = paste(eunoneu, "-", flow)) %>% 
+#   ggplot(aes(x = date, y = value)) +
+#   geom_line(aes(colour = x)) +
+#   scale_y_continuous(labels = label_comma(scale = 0.000000001, prefix = "£", suffix = "bn")) +
+#   scale_x_date(date_labels = "%Y %b") +
+#   scale_colour_brewer(palette = chart_palette) +
+#   theme +
+#   labs(x = NULL,
+#        y = NULL,
+#        title = "Value of trade, EU/Non EU (inc NR")
 
 
 
@@ -378,7 +379,7 @@ scale_y_continuous(labels = label_comma(scale = 0.000001, prefix = "£", suffix 
   scale_colour_brewer(palette = chart_palette) +
   labs(x = NULL,
        y = NULL,
-       title = "Value of trade, SITC2 level")
+       title = "Value of trade, SITC2 level (inc NR)")
 
 
 # Year on year change barcharts by mmonth facet by divcode, exports and imports
@@ -398,7 +399,7 @@ divyoy %>%
         panel.border = element_blank()) +
   labs(x = NULL,
        y = NULL,
-       title = "Year on year change in value of exports, 2021")
+       title = "Year on year change in value of exports, 2021 (inc NR)")
 
 divyoy %>% 
   filter(date >="2021-01-01", flow == "Imports") %>% 
@@ -416,17 +417,18 @@ divyoy %>%
         panel.border = element_blank()) +
   labs(x = NULL,
        y = NULL,
-       title = "Year on year change in value of imports, 2021")
+       title = "Year on year change in value of imports, 2021 (inc NR)")
 
 
 ```
 
-**Value of trade and year on year percentage change** 
+### Table: Value of trade and year on year percentage change, SITC2 (inc NR)
 
 ``` {r divyoy_table}
 divyoy %>% 
   filter(date == params$date) %>% 
-  reactable()
+  mutate(yoy = percent(yoy)) %>% 
+  reactable(filterable = TRUE, compact = TRUE)
 
 ```
 
@@ -451,7 +453,8 @@ euirl %>%
                   legend.position = "bottom",
                   strip.text.y = element_text(angle = 0)) +
             labs(x = NULL,
-                 y = "value")
+                 y = "value",
+                 title = "Year on year change (exc NR)")
 
  
 euirl %>% 
@@ -471,7 +474,7 @@ euirl %>%
         strip.text.y = element_text(angle = 0)) +
   labs(x = NULL,
        y = "Value",
-       title = "Value of imports by region")
+       title = "Value of imports by region (exc NR)")
 
 euirl %>% 
   filter(flow == "Exports", date >= "2020-01-01") %>% 
@@ -490,7 +493,7 @@ euirl %>%
         strip.text.y = element_text(angle = 0)) +
   labs(x = NULL,
        y = "Value",
-       title = "Value of exports by region")
+       title = "Value of exports by region (exc NR)")
 
 
 ```
@@ -517,7 +520,7 @@ euirl %>%
                   strip.text.y = element_text(angle = 0)) +
             labs(x = NULL,
                  y = "value",
-                 title = "Year on year change in trade values, EU")
+                 title = "Year on year change in trade values, EU (exc NR)")
 
 
 
@@ -543,7 +546,7 @@ euirl %>%
                   strip.text.y = element_text(angle = 0)) +
             labs(x = NULL,
                  y = "value",
-                 title = "Year on year change in export values, March 2021")
+                 title = "Year on year change in export values, March 2021 (exc NR)")
 
 euirl %>%            
             ungroup() %>% 
@@ -567,17 +570,17 @@ euirl %>%
                   strip.text.y = element_text(angle = 0)) +
             labs(x = NULL,
                  y = "value",
-                 title = "Year on year change in import values, March 2021")
+                 title = "Year on year change in import values, March 2021 (exc NR)")
 
 
 
 ```
 
-**Values and year on year change, March 2021** 
+### Table: Values and year on year change, March 2021 (exc NR)
 
 ``` {r}
-
-reactable(euirlyoy)
+euirlyoy %>% 
+reactable(filterable = TRUE, compact = TRUE)
 
 ```
 
@@ -603,7 +606,7 @@ euirlpc %>%
   theme(legend.title = element_blank()) +
   labs(x = NULL,
        y = NULL,
-       title = "Proportion of EU export values to Ireland, 2020-2021")
+       title = "Proportion of EU export values to Ireland, 2020-2021 (exc NR)")
 
 euirlpc %>% 
     filter(flow == "Exports", date >= "2020-01-01") %>% 
@@ -611,7 +614,7 @@ euirlpc %>%
     select(!c(value)) %>% 
     pivot_wider(names_from = date, values_from = pc) %>% 
     arrange(divdesc, euirl) %>% 
-    knitr::kable()
+    reactable(filterable = TRUE, compact = TRUE)
 
 
 # values
@@ -637,7 +640,7 @@ valdiffs %>%
         panel.border = element_blank()) +
   labs(x = NULL,
        y = NULL,
-       title = "Year on year change in export values, EU/Ireland 2021")
+       title = "Year on year change in export values, EU/Ireland 2021 (exc NR)")
 
 valdiffs %>% 
     filter(date >= "2021-01-01", flow == "Exports", euirl != "RoW") %>% 
@@ -645,15 +648,12 @@ valdiffs %>%
     mutate(valuediff = money(valuediff)) %>% 
     pivot_wider(names_from = date, values_from = valuediff) %>% 
     arrange(divdesc, euirl) %>%   
-    knitr::kable()
-
-
-
+    reactable(filterable = TRUE, compact = TRUE)
 
 
 ```
 
-### Non response estimates for values
+## Non response estimates for values
 
 The charts and tables below detail the contribution of non response to overall trade values. Whilst the contribution is generally low, non response estimates for imports have increased markedly since January 2021.
 
@@ -670,7 +670,8 @@ nonresponse %>%
   ungroup() %>% 
   ggplot(aes(x = date, y = valuenr)) +
   geom_line(aes(colour = flow)) +
-  scale_y_continuous(labels = comma) +
+  scale_y_continuous(labels = label_comma(scale = 0.000001, prefix = "£", suffix = "m")) +
+  scale_colour_brewer(palette = chart_palette) +
   theme_minimal() +
   theme(legend.title = element_blank(),
         legend.position = c(0.2,0.9),
@@ -722,6 +723,14 @@ totnr <- divs %>%
     pivot_wider(names_from = date,
                 values_from = pcnr)
 
+
+
+
+nonresponse %>% 
+  left_join(divcodes) %>% 
+  filter(date == "2021-03-01") %>% 
+  mutate(valuenr = money(valuenr)) %>% 
+  reactable(filterable = TRUE, compact = TRUE)
 
 ```
 
