@@ -611,7 +611,7 @@ euirlpc %>%
 euirlpc %>% 
     filter(flow == "Exports", date >= "2020-01-01") %>% 
     mutate(pc = percent(pc)) %>% 
-    select(!c(value)) %>% 
+    select(!c(value)) %>%
     pivot_wider(names_from = date, values_from = pc) %>% 
     arrange(divdesc, euirl) %>% 
     reactable(filterable = TRUE, compact = TRUE)
@@ -644,7 +644,7 @@ valdiffs %>%
 
 valdiffs %>% 
     filter(date >= "2021-01-01", flow == "Exports", euirl != "RoW") %>% 
-    select(!c(value, diff)) %>% 
+    # select(!c(value, diff)) %>% 
     mutate(valuediff = money(valuediff)) %>% 
     pivot_wider(names_from = date, values_from = valuediff) %>% 
     arrange(divdesc, euirl) %>%   
