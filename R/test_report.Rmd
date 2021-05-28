@@ -582,6 +582,24 @@ euirl %>%
 euirlyoy %>% 
 reactable(filterable = TRUE, compact = TRUE)
 
+euirltot <- euirl %>% 
+  group_by(date, flow, euirl) %>% 
+  summarise(value = sum(value)) %>% 
+  ungroup() %>%
+  group_by(flow, euirl) %>% 
+  mutate(lag12 = lag(value, n = 12),
+         delta = value - lag12,
+         yoy = percent((value/lag12)-1, accuracy = 1)) %>% 
+  filter(date >= "2021-03-01") %>% 
+  mutate(tradevalue = comma(value, scale = 0.000001, prefix = "£", suffix = "m"),
+         prevyear = comma(lag12, scale = 0.000001, prefix = "£", suffix = "m"),
+         change = comma(delta, scale = 0.000001, prefix = "£", suffix = "m")) %>% 
+  select(!c(value, lag12, delta)) %>% 
+  pivot_wider(names_from = date, values_from = c(tradevalue, prevyear, change, yoy))
+
+euirltot %>% 
+  reactable(filterable = TRUE, compact = TRUE)
+
 ```
 
 ### David K addition
