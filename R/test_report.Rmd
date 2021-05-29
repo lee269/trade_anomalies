@@ -33,11 +33,12 @@ library("readr")
 library("lubridate")
 library("scales")
 library("reactable")
+library(glue)
 
 source(here("R", "money.R"))
 
 # chart chunks
-chart_palette <- "Set2"
+chart_palette <- "Paired"
 
 theme <-   theme_minimal() +
            theme(legend.title = element_blank(),
@@ -252,12 +253,46 @@ Trade has generally recovered from the downturn seen in the first two months of 
 
 ``` {r eu_yoy_table}
 
-reactable(euyoy,
-          defaultColDef = colDef(header = function(value) gsub("_", "\n ", value, fixed = TRUE)),
+# Prettify the euyoy table for printing
+eupretty <- eu %>% 
+        group_by(eunoneu, flow) %>% 
+        mutate(diff = lag(value, n = 12),
+               `year on year` = percent((value/diff) - 1, accuracy = 0.1),
+               `trade value` = money(value)
+               ) %>% 
+        arrange(flow, eunoneu) %>%
+        filter(date >= ymd(params$date) - months(2)) %>% 
+        select(!c(value, diff)) %>% 
+        pivot_wider(names_from = date, 
+                    values_from = c(`trade value`, `year on year`),
+                    names_glue = "{format(date, '%b %Y')} {str_to_sentence(.value)}") %>% 
+        ungroup()
+
+
+reactable(eupretty,
+          compact = TRUE,
+          defaultColDef = colDef(header = function(value) gsub("_", "\n ", value, fixed = TRUE),
+                                 align = "right",
+                                 style = function(value) {
+                    ispc <- function(val)(str_detect(val, "%"))
+                    if (ispc(value) && as.numeric(str_remove(value, "%")) > 0) {
+                      color <- "#008000"
+                    } else if (ispc(value) && as.numeric(str_remove(value, "%")) < 0) {
+                      color <- "#e00000"
+                    } else {
+                      color <- "#000000"
+                    }
+                    list(color = color, fontWeight = "bold")
+                  }
+                                 ),
           columns = list(
             flow = colDef(name = "Trade flow"),
             eunoneu = colDef(name = "EU/Non EU")
-          ))
+            )
+          )
+
+
+
 
 ```
 
@@ -271,7 +306,9 @@ ffdall %>%
   filter(date >= "2019-01-01") %>% 
   ggplot(aes(x = date, y = value)) + 
   geom_line(aes(colour = flow), stat = "identity") +
+  geom_point(aes(colour = flow), size = 0.7) +
   scale_y_continuous(labels = label_comma(scale = 0.000000001, prefix = "£", suffix = "bn")) +
+  expand_limits(y = 0) +
   scale_x_date(date_labels = "%Y %b") +
   scale_colour_brewer(palette = chart_palette) + 
   theme +
@@ -294,8 +331,10 @@ eu %>%
   filter(date >= "2019-01-01") %>% 
   ggplot(aes(x = date, y = value)) +
   geom_line(aes(colour = flow)) +
+  geom_point(aes(colour = flow), size = 0.7) +
   facet_grid(rows = ~eunoneu) +
   scale_y_continuous(labels = label_comma(scale = 0.000000001, prefix = "£", suffix = "bn")) +
+  expand_limits(y = 0) +
   scale_x_date(date_labels = "%Y %b") +
   scale_colour_brewer(palette = chart_palette) +
   theme +
@@ -321,58 +360,28 @@ eu %>%
 
 ```
 
-### By product
+### By product (inc NR)
+
+In `r month(params$date, label = TRUE, abbr = FALSE)` `r year(params$date)` the `r yoy %>% filter(date == params$date, flow == "Exports") %>% pull(value) %>% money` of exports broke down into the following by SITC product group. 
+`r ffddiv %>% filter(date == params$date, flow == "Exports") %>% glue_data("**{divdesc}:** {money(value)} ", .sep = "\\n")`
 
 ```{r product}
-
-# ffddiv <- divs %>% 
-#      left_join(nonresponse) %>% 
-#      left_join(divcodes) %>% 
-#       mutate(valuetot = replace_na(value + valuenr, 0)) %>% 
-#       select(!c(value, valuenr, divcode)) %>%  
-#       group_by(flow, divdesc, date) %>% 
-#       summarise(valuetot = sum(valuetot))
-# 
-# divyoy <- ffddiv %>%
-#   group_by(flow, divdesc) %>% 
-#       mutate(diff = lag(valuetot, n = 12),
-#                yoy = percent((valuetot/diff) - 1),
-#                amount = money(valuetot*1000)) %>% 
-#   filter(date == "2021-03-01") %>% 
-#   select(flow, divdesc, amount, yoy)
-
-# ffddiv %>%
-#   filter(date >= "2020-01-01") %>% 
-#   ggplot(aes(x = date, y = value)) +
-#   geom_line(aes(colour = flow)) +
-#   facet_grid(rows = vars(divdesc),
-#              cols = vars(flow),
-#              scales = "free",
-#              labeller = label_wrap_gen(width = 30)) +
-#   scale_y_continuous(labels = label_comma(scale = 0.000000001, prefix = "£", suffix = "bn")) +
-#   scale_x_date(date_labels = "%Y \n %b") +
-#   theme_minimal() +
-#   theme(legend.title = element_blank(),
-#         strip.text.y = element_text(angle = 0),
-#         legend.position = "none") +
-#   labs(x = NULL,
-#        y = "value",
-#        title = "Value of trade, SITC2 level")
-
 
 # Value of trade time series small multiple by divcode
 ffddiv %>%
   filter(date >= "2020-01-01") %>% 
   ggplot(aes(x = date, y = value)) +
   geom_line(aes(colour = flow)) +
+  geom_point(aes(colour = flow), size = 0.5) +
   facet_wrap(vars(divdesc),
              scales = "fixed",
              labeller = label_wrap_gen(width = 20)) +
-scale_y_continuous(labels = label_comma(scale = 0.000001, prefix = "£", suffix = "m")) +
+  scale_y_continuous(labels = label_comma(scale = 0.000001, prefix = "£", suffix = "m")) +
   scale_x_date(date_labels = "%y \n %b") +
   theme_minimal() +
   theme(legend.title = element_blank(),
         legend.position = "bottom",
+        legend.text = element_text(face = "bold"),
         panel.grid.minor = element_blank(),
         panel.background = element_rect(fill = "gray99", linetype = 0)
         ) +
@@ -380,13 +389,21 @@ scale_y_continuous(labels = label_comma(scale = 0.000001, prefix = "£", suffix 
   labs(x = NULL,
        y = NULL,
        title = "Value of trade, SITC2 level (inc NR)")
+```
+
+**Exports** of **`r divyoy %>% filter(date == params$date, flow == "Exports") %>% slice(which.max(yoy)) %>% pull(var = divdesc)`** had the largest increase in year on year trade value, at **`r divyoy %>% filter(date == params$date, flow == "Exports") %>% slice(which.max(yoy)) %>% pull(var = yoy) %>% percent(, accuracy = 0.1)`**. **`r divyoy %>% filter(date == params$date, flow == "Exports") %>% slice(which.min(yoy)) %>% pull(var = divdesc)`** had the largest decrease, of **`r divyoy %>% filter(date == params$date, flow == "Exports") %>% slice(which.min(yoy)) %>% pull(var = yoy) %>% percent(, accuracy = 0.1)`**.
+
+For **imports**, **`r divyoy %>% filter(date == params$date, flow == "Imports") %>% slice(which.max(yoy)) %>% pull(var = divdesc)`** showed the largest year on year increase, of **`r divyoy %>% filter(date == params$date, flow == "Imports") %>% slice(which.max(yoy)) %>% pull(var = yoy) %>% percent(, accuracy = 0.1)`**. **`r divyoy %>% filter(date == params$date, flow == "Imports") %>% slice(which.min(yoy)) %>% pull(var = divdesc)`** had the largest decrease, of **`r divyoy %>% filter(date == params$date, flow == "Imports") %>% slice(which.min(yoy)) %>% pull(var = yoy) %>% percent(, accuracy = 0.1)`**.
 
 
-# Year on year change barcharts by mmonth facet by divcode, exports and imports
+
+```{r product_yoy}
+# Year on year change barcharts by month facet by divcode, exports and imports
 divyoy %>% 
   filter(date >= "2021-01-01", flow == "Exports") %>% 
   ggplot(aes(x = date, y = yoy)) +
   geom_bar(aes(fill = flow), stat = "identity", position = "dodge") +
+  geom_hline(yintercept = 0, size = 0.2, colour = "gray50") +
   facet_wrap(vars(divdesc), labeller = label_wrap_gen(width = 20)) +
   scale_y_continuous(labels = percent) +
   scale_fill_brewer(palette = chart_palette) +
@@ -405,6 +422,7 @@ divyoy %>%
   filter(date >="2021-01-01", flow == "Imports") %>% 
   ggplot(aes(x = date, y = yoy)) +
   geom_bar(aes(fill = flow), stat = "identity", position = "dodge") +
+  geom_hline(yintercept = 0, size = 0.2, colour = "gray50") +
   facet_wrap(vars(divdesc), labeller = label_wrap_gen(width = 20)) +
   scale_y_continuous(labels = percent) +
   scale_fill_brewer(palette = chart_palette) +
