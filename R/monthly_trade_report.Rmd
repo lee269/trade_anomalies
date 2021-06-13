@@ -6,9 +6,6 @@ output:
     toc: yes
     toc_float: yes
 params:
-  ffddata: ffd202104.csv
-  ffdcountrydata: ffdcountry202104.csv
-  nrdata: nonresponse202104.csv
   date: '2021-04-01'
 ---
 
@@ -22,18 +19,19 @@ knitr::opts_chunk$set(
 	fig.height = 7
 )
 
-library("here")
-library("dplyr")
-library("ggplot2")
-library("purrr")
-library("tidyr")
-library("patchwork")
-library("stringr")
-library("readr")
-library("lubridate")
-library("scales")
-library("reactable")
+library(here)
+library(dplyr)
+library(ggplot2)
+library(purrr)
+library(tidyr)
+library(patchwork)
+library(stringr)
+library(readr)
+library(lubridate)
+library(scales)
+library(reactable)
 library(glue)
+library(forcats)
 
 source(here("R", "money.R"))
 
@@ -177,7 +175,7 @@ euirlyoy <- euirl %>%
 Trade has generally recovered from the downturn seen in the first two months of 2021.
 
 
-**Year on year trade comparisons EU/RoW (inc NR)**
+**Year on year trade comparisons EU/RoW **
 
 ``` {r eu_yoy_table}
 
@@ -185,14 +183,16 @@ Trade has generally recovered from the downturn seen in the first two months of 
 eupretty <- eu %>% 
         group_by(eunoneu, flow) %>% 
         mutate(diff = lag(value, n = 12),
+               diff24 = lag(value, n = 24),
+               `year on 2 year` = percent((value/diff24) - 1, accuracy = 0.1),
                `year on year` = percent((value/diff) - 1, accuracy = 0.1),
                `trade value` = money(value)
                ) %>% 
         arrange(flow, eunoneu) %>%
         filter(date >= ymd(params$date) - months(2)) %>% 
-        select(!c(value, diff)) %>% 
+        select(!c(value, diff, diff24)) %>% 
         pivot_wider(names_from = date, 
-                    values_from = c(`trade value`, `year on year`),
+                    values_from = c(`trade value`, `year on year`, `year on 2 year`),
                     names_glue = "{format(date, '%b %Y')} {str_to_sentence(.value)}") %>% 
         ungroup()
 
@@ -218,17 +218,13 @@ reactable(eupretty,
             eunoneu = colDef(name = "EU/Non EU")
             )
           )
+ 
 
 # knitr::kable(eupretty)
-
-
 ```
 
 ```{r eu_charts, fig.height=4}
-# 
-# knitr::opts_chunk$set(
-# 	fig.height = 4
-# )
+# Note the figure height adjustment
 
 ffdall %>%
   filter(date >= "2019-01-01") %>% 
@@ -242,18 +238,8 @@ ffdall %>%
   theme +
   labs(x = NULL,
        y = NULL,
-       title = "Value of trade in food, feed and drink (inc NR)")
+       title = "Value of trade in food, feed and drink ")
 
-# yoy %>% 
-#   ggplot(aes(x = date, y = yoy)) +
-#   geom_bar(aes(fill = flow), stat = "identity") +
-#   facet_grid(rows = ~flow) +
-#   scale_y_continuous(labels = scales::percent) +
-#   scale_x_date(limits = ymd(c("2018-01-01", "2021-03-01"))) +
-#   theme_minimal() +
-#   labs(x = NULL,
-#        y = "% change year on year",
-#        title = "Percentage change in value of trade")
 
 eu %>% 
   filter(date >= "2019-01-01") %>% 
@@ -268,27 +254,11 @@ eu %>%
   theme +
   labs(x = NULL,
        y = NULL,
-       title = "Value of trade, EU/Non EU (inc NR)")
-
-# Matt suggestion
-# eu %>% 
-#   filter(date >= "2019-01-01") %>% 
-#   mutate(x = paste(eunoneu, "-", flow)) %>% 
-#   ggplot(aes(x = date, y = value)) +
-#   geom_line(aes(colour = x)) +
-#   scale_y_continuous(labels = label_comma(scale = 0.000000001, prefix = "£", suffix = "bn")) +
-#   scale_x_date(date_labels = "%Y %b") +
-#   scale_colour_brewer(palette = chart_palette) +
-#   theme +
-#   labs(x = NULL,
-#        y = NULL,
-#        title = "Value of trade, EU/Non EU (inc NR")
-
-
+       title = "Value of trade, EU/Non EU ")
 
 ```
 
-### By product (inc NR)
+### By product 
 
 In `r month(params$date, label = TRUE, abbr = FALSE)` `r year(params$date)` the `r yoy %>% filter(date == params$date, flow == "Exports") %>% pull(value) %>% money` of exports broke down into the following by SITC product group. 
 
@@ -296,8 +266,16 @@ In `r month(params$date, label = TRUE, abbr = FALSE)` `r year(params$date)` the 
 
 cat(ffddiv %>% filter(date == params$date, flow == "Exports") %>% glue_data("\n\n - {divdesc}: **{money(value)}** \n"))
 
+```
 
 
+**Exports** of **`r divyoy %>% filter(date == params$date, flow == "Exports") %>% slice(which.max(yoy)) %>% pull(var = divdesc)`** had the largest increase in year on year trade value, at **`r divyoy %>% filter(date == params$date, flow == "Exports") %>% slice(which.max(yoy)) %>% pull(var = yoy) %>% percent(, accuracy = 0.1)`**. **`r divyoy %>% filter(date == params$date, flow == "Exports") %>% slice(which.min(yoy)) %>% pull(var = divdesc)`** had the largest decrease, of **`r divyoy %>% filter(date == params$date, flow == "Exports") %>% slice(which.min(yoy)) %>% pull(var = yoy) %>% percent(, accuracy = 0.1)`**.
+
+For **imports**, **`r divyoy %>% filter(date == params$date, flow == "Imports") %>% slice(which.max(yoy)) %>% pull(var = divdesc)`** showed the largest year on year increase, of **`r divyoy %>% filter(date == params$date, flow == "Imports") %>% slice(which.max(yoy)) %>% pull(var = yoy) %>% percent(, accuracy = 0.1)`**. **`r divyoy %>% filter(date == params$date, flow == "Imports") %>% slice(which.min(yoy)) %>% pull(var = divdesc)`** had the largest decrease, of **`r divyoy %>% filter(date == params$date, flow == "Imports") %>% slice(which.min(yoy)) %>% pull(var = yoy) %>% percent(, accuracy = 0.1)`**.
+
+Based on year on year comparisons, it looks like trade values are settling back to normal levels following the negative impacts at the beginning of 2021, although there is always some volatility in monthly data.
+
+```{r trade_time_series}
 # Value of trade time series small multiple by divcode
 ffddiv %>%
   filter(date >= "2020-01-01") %>% 
@@ -319,12 +297,9 @@ ffddiv %>%
   scale_colour_brewer(palette = chart_palette) +
   labs(x = NULL,
        y = NULL,
-       title = "Value of trade, SITC2 level (inc NR)")
+       title = "Value of trade, SITC2 level ")
 ```
 
-**Exports** of **`r divyoy %>% filter(date == params$date, flow == "Exports") %>% slice(which.max(yoy)) %>% pull(var = divdesc)`** had the largest increase in year on year trade value, at **`r divyoy %>% filter(date == params$date, flow == "Exports") %>% slice(which.max(yoy)) %>% pull(var = yoy) %>% percent(, accuracy = 0.1)`**. **`r divyoy %>% filter(date == params$date, flow == "Exports") %>% slice(which.min(yoy)) %>% pull(var = divdesc)`** had the largest decrease, of **`r divyoy %>% filter(date == params$date, flow == "Exports") %>% slice(which.min(yoy)) %>% pull(var = yoy) %>% percent(, accuracy = 0.1)`**.
-
-For **imports**, **`r divyoy %>% filter(date == params$date, flow == "Imports") %>% slice(which.max(yoy)) %>% pull(var = divdesc)`** showed the largest year on year increase, of **`r divyoy %>% filter(date == params$date, flow == "Imports") %>% slice(which.max(yoy)) %>% pull(var = yoy) %>% percent(, accuracy = 0.1)`**. **`r divyoy %>% filter(date == params$date, flow == "Imports") %>% slice(which.min(yoy)) %>% pull(var = divdesc)`** had the largest decrease, of **`r divyoy %>% filter(date == params$date, flow == "Imports") %>% slice(which.min(yoy)) %>% pull(var = yoy) %>% percent(, accuracy = 0.1)`**.
 
 
 
@@ -347,7 +322,7 @@ divyoy %>%
         panel.border = element_blank()) +
   labs(x = NULL,
        y = NULL,
-       title = "Year on year change in value of exports, 2021 (inc NR)")
+       title = "Year on year change in value of exports, 2021 ")
 
 divyoy %>% 
   filter(date >="2021-01-01", flow == "Imports") %>% 
@@ -366,12 +341,12 @@ divyoy %>%
         panel.border = element_blank()) +
   labs(x = NULL,
        y = NULL,
-       title = "Year on year change in value of imports, 2021 (inc NR)")
+       title = "Year on year change in value of imports, 2021 ")
 
 
 ```
 
-### Table: Value of trade and year on year percentage change, SITC2 (inc NR)
+### Table: Value of trade and year on year percentage change, SITC2 
 
 ``` {r divyoy_table}
 divyoy %>% 
@@ -382,157 +357,98 @@ divyoy %>%
 
 ```
 
-### EU and Ireland split
-
-```{r countries}
-
-# euirl %>%            
-#             group_by(divdesc, flow, euirl) %>% 
-#             mutate(diff = lag(value, n = 12),
-#                    val = money(value),
-#                    yoyval = value - diff,
-#                    yoypc = percent((value/diff)-1, accuracy = 1)) %>% 
-#             filter(date == params$date) %>%
-#             ggplot(aes(x = euirl, y = yoyval)) +
-#             geom_bar(aes(fill = euirl),stat = "identity") +
-#             facet_grid(rows = vars(divdesc), cols = vars(flow), scales = "free") +
-#             scale_y_continuous(labels = comma) +
-#             theme_minimal() +
-#             theme(panel.grid.minor = element_blank(),
-#                   legend.title = element_blank(),
-#                   legend.position = "bottom",
-#                   strip.text.y = element_text(angle = 0)) +
-#             labs(x = NULL,
-#                  y = "value",
-#                  title = "Year on year change (exc NR)")
-# 
-#  
-# euirl %>% 
-#   filter(flow == "Imports", date >= "2020-01-01") %>% 
-#   ggplot(aes(x = date, y = value)) +
-#   geom_line(aes(colour = euirl)) + 
-#   facet_grid(rows = vars(divdesc),
-#              cols = vars(euirl),
-#              scales = "free",
-#              labeller = label_wrap_gen(width = 30)) +
-#   scale_y_continuous(labels = comma) +
-#   scale_x_date(date_labels = "%y \n %b") +
-#   theme_minimal() +
-#   theme(legend.title = element_blank(),
-#         legend.position = "none",
-#         panel.grid.minor = element_blank(),
-#         strip.text.y = element_text(angle = 0)) +
-#   labs(x = NULL,
-#        y = "Value",
-#        title = "Value of imports by region (exc NR)")
-# 
-# euirl %>% 
-#   filter(flow == "Exports", date >= "2020-01-01") %>% 
-#   ggplot(aes(x = date, y = value)) +
-#   geom_line(aes(colour = euirl)) + 
-#   facet_grid(rows = vars(divdesc),
-#              cols = vars(euirl),
-#              scales = "free",
-#              labeller = label_wrap_gen(width = 30)) +
-#   scale_y_continuous(labels = comma) +
-#   scale_x_date(date_labels = "%y \n %b") +
-#   theme_minimal() +
-#   theme(legend.title = element_blank(),
-#         legend.position = "bottom",
-#         panel.grid.minor = element_blank(),
-#         strip.text.y = element_text(angle = 0)) +
-#   labs(x = NULL,
-#        y = "Value",
-#        title = "Value of exports by region (exc NR)")
-
-
-```
+## FFD Progress
 
 ```{r}
 
-# Matt - add back RoW
-# euirl %>%            
-#             ungroup() %>% 
-#             group_by(divdesc, flow, euirl) %>% 
-#             mutate(diff = lag(value, n = 12),
-#                    val = money(value),
-#                    yoyval = value - diff,
-#                    yoypc = percent((value/diff)-1, accuracy = 1)) %>% 
-#             filter(date == params$date) %>%
-#             ggplot(aes(x = flow, y = yoyval, group = euirl)) +
-#             geom_bar(aes(fill = euirl), stat = "identity") +
-#             facet_wrap(vars(divdesc), scales = "free", labeller = label_wrap_gen(width = 20)) +
-#             scale_y_continuous(labels = comma) +
-#             theme_minimal() +
-#             theme(panel.grid.minor = element_blank(),
-#                   legend.title = element_blank(),
-#                   legend.position = "bottom",
-#                   strip.text.y = element_text(angle = 0)) +
-#             labs(x = NULL,
-#                  y = "value",
-#                  title = "Year on year change in trade values, EU (exc NR)")
-# 
-# 
-# 
-# euirl %>%            
-#             ungroup() %>% 
-#             filter(flow == "Exports") %>% 
-#             group_by(divdesc, flow, euirl) %>% 
-#             mutate(diff = lag(value, n = 12),
-#                    val = money(value),
-#                    yoyval = value - diff,
-#                    yoypc = percent((value/diff)-1, accuracy = 1)) %>% 
-#             filter(date == params$date) %>%
-#             ggplot(aes(x = divdesc, y = yoyval, group = euirl)) +
-#             geom_bar(aes(fill = euirl), stat = "identity") +
-#             # facet_grid(cols = vars(divdesc), scales = "free", labeller = label_wrap_gen(width = 20)) +
-#             scale_y_continuous(labels = comma) +
-#             scale_x_discrete(labels = function (x) str_wrap(x, width = 30)) +
-#             coord_flip() +
-#             theme_minimal() +
-#             theme(panel.grid.minor = element_blank(),
-#                   legend.title = element_blank(),
-#                   legend.position = "bottom",
-#                   strip.text.y = element_text(angle = 0)) +
-#             labs(x = NULL,
-#                  y = "value",
-#                  title = "Year on year change in export values, March 2021 (exc NR)")
-# 
-# euirl %>%            
-#             ungroup() %>% 
-#             filter(flow == "Imports") %>% 
-#             group_by(divdesc, flow, euirl) %>% 
-#             mutate(diff = lag(value, n = 12),
-#                    val = money(value),
-#                    yoyval = value - diff,
-#                    yoypc = percent((value/diff)-1, accuracy = 1)) %>% 
-#             filter(date == params$date) %>%
-#             ggplot(aes(x = divdesc, y = yoyval, group = euirl)) +
-#             geom_bar(aes(fill = euirl), stat = "identity") +
-#             # facet_grid(cols = vars(divdesc), scales = "free", labeller = label_wrap_gen(width = 20)) +
-#             scale_y_continuous(labels = comma) +
-#             scale_x_discrete(labels = function (x) str_wrap(x, width = 30)) +
-#             coord_flip() +
-#             theme_minimal() +
-#             theme(panel.grid.minor = element_blank(),
-#                   legend.title = element_blank(),
-#                   legend.position = "bottom",
-#                   strip.text.y = element_text(angle = 0)) +
-#             labs(x = NULL,
-#                  y = "value",
-#                  title = "Year on year change in import values, March 2021 (exc NR)")
+ffd2020 <- ffd %>% 
+            filter(year >= 2020, flow == "Exports") %>% 
+            group_by(year, product) %>% 
+            summarise(value = sum(value),
+                    tonnes = sum(tonnes),.groups = "drop") %>% 
+            mutate(product = ifelse(year == 2020 & value <= 100000000, "Other", product),
+                   product = ifelse(year == 2021 & value <= 10000000, "Other", product)) %>% 
+            group_by(year, product) %>% 
+            summarise(value = sum(value),
+                    tonnes = sum(tonnes),.groups = "drop")
 
+productfct <- ffd2020 %>% filter(year == 2020) %>%  arrange(-value) %>% select(product) %>% pull
+
+ffd2020 <- ffd2020 %>% mutate(product = fct_relevel(factor(product, levels = productfct), "Other", after = Inf),
+                              product = fct_explicit_na(product, na_level = "Other"))
+
+total <- summarise(ffd2020, value = sum(value)) %>% pull
+
+dark <- "darkolivegreen"
+light <- "darkolivegreen1"
+
+ggplot() +
+  geom_bar(data = ffd2020, aes(x = fct_rev(product), y = value, fill = factor(year)), stat = "identity", position = "dodge") +
+  geom_text(data = filter(ffd2020, year == 2020 & value >= 3000000000),
+            aes(x = product, y = value, label = paste0("£", comma(value,scale = 0.000001, accuracy = 1), "m")),
+            # position = position_stack(vjust = 1),
+            hjust = 1,
+            nudge_y = 0,
+            size = 3,
+            colour = "gray60") +
+    geom_text(data = filter(ffd2020, year == 2020 & value <= 3000000000),
+            aes(x = product, y = value, label = paste0("£", comma(value,scale = 0.000001, accuracy = 1), "m")),
+            # position = position_stack(vjust = 1),
+            hjust = -0.1,
+            nudge_y = 0,
+            size = 3,
+            colour = "gray60") +
+  # scale_fill_manual(values = c(dark, light)) +
+  scale_fill_brewer(palette = chart_palette) +
+  scale_y_continuous(labels = label_comma(scale = 0.000001, prefix = "£", suffix = "m")) +
+  coord_flip() +
+  labs(x = NULL,
+       y = NULL,
+       title = "Export values, 2020 and year to date 2021") +
+  theme_minimal() +
+  theme(panel.grid.major.y = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.background = element_rect(fill = "gray90", linetype = 0),
+        plot.background = element_rect(fill = "gray97", linetype = 0),
+        plot.title = element_text(face = "bold", size = 18, colour = "gray40", hjust = 0.5),
+        legend.title = element_blank(),
+        legend.position = c(0.9, 0.1))
 
 
 ```
 
-### Table: Values and year on year change, March 2021 (exc NR)
+### EU and Ireland split
+
+The figures for EU and Ireland do not include HMRC estimates of trade value due
+to non-response to the Intrastat survey. At the aggregate level, non response
+accounts for around 2-3% of total import trade value, and is negligible for
+export figures.
+
+```{r nonresponse_table}
+divs %>% 
+    filter(date >= "2020-12-01") %>% 
+         # flow == "Imports") %>%
+  left_join(nonresponse) %>% 
+    group_by(flow, date) %>% 
+  summarise(value = sum(value),
+            valuenr = sum(valuenr)) %>% 
+  mutate(pcnr = percent(valuenr/(value + valuenr), accuracy = 0.1,)) %>% 
+  select(!c(value, valuenr)) %>% 
+    pivot_wider(names_from = date,
+                values_from = pcnr,
+                names_glue = "{format(date, '%b %Y')}") %>% 
+  knitr::kable(caption = "**Proportion of total trade value estimated for non-reponse**")
+
+```
+
+
+### Table: Values and year on year change, March 2021
 
 ``` {r}
 # euirlyoy %>% 
 # reactable(filterable = TRUE, compact = TRUE)
 
-euirltot <- euirl %>% 
+euirl %>% 
   group_by(date, flow, euirl) %>% 
   summarise(value = sum(value)) %>% 
   ungroup() %>%
@@ -545,11 +461,25 @@ euirltot <- euirl %>%
          prevyear = comma(lag12, scale = 0.000001, prefix = "£", suffix = "m"),
          change = comma(delta, scale = 0.000001, prefix = "£", suffix = "m")) %>% 
   select(!c(value, lag12, delta)) %>% 
-  pivot_wider(names_from = date, values_from = c(tradevalue, prevyear, change, yoy))
+  pivot_wider(names_from = date, values_from = c(tradevalue, prevyear, change, yoy)) %>% 
+  knitr::kable(caption = "Values and year on year change, April 2021")
 
-euirltot %>%
-  knitr::kable()
-  # reactable(filterable = TRUE, compact = TRUE)
+euirl %>% 
+  group_by(date, flow, euirl) %>% 
+  summarise(value = sum(value)) %>% 
+  ungroup() %>%
+  group_by(flow, euirl) %>% 
+  mutate(lag12 = lag(value, n = 24),
+         delta = value - lag12,
+         yoy = percent((value/lag12)-1, accuracy = 1)) %>% 
+  filter(date >= params$date) %>% 
+  mutate(tradevalue = comma(value, scale = 0.000001, prefix = "£", suffix = "m"),
+         prevyear = comma(lag12, scale = 0.000001, prefix = "£", suffix = "m"),
+         change = comma(delta, scale = 0.000001, prefix = "£", suffix = "m")) %>% 
+  select(!c(value, lag12, delta)) %>% 
+  pivot_wider(names_from = date, values_from = c(tradevalue, prevyear, change, yoy)) %>% 
+  knitr::kable(caption = "Values and year on 2 year change, April 2021")
+
 
 ```
 
@@ -614,102 +544,13 @@ valdiffs %>%
     filter(date >= "2021-01-01", flow == "Exports", euirl != "RoW") %>% 
     # select(!c(value, diff)) %>% 
     mutate(valuediff = money(valuediff)) %>% 
-    pivot_wider(names_from = date, values_from = valuediff) %>% 
+    pivot_wider(names_from = date, values_from = valuediff, id_cols = c(flow, euirl, divdesc), names_glue = "{format(date, '%b %Y')}") %>% 
     arrange(divdesc, euirl) %>%   
-    reactable(filterable = TRUE, compact = TRUE)
-
-
-```
-
-## Non response estimates for values
-
-The charts and tables below detail the contribution of non response to overall trade values. Whilst the contribution is generally low, non response estimates for imports have increased markedly since January 2021.
-
-```{r nonresponse}
-
-nrdiv <- divs %>% 
-     left_join(nonresponse) %>% 
-      pivot_longer(cols = c(value,valuenr))
-
-# Non repsonse time series line chart
-nonresponse %>% 
-  group_by(flow, date) %>% 
-  summarise(valuenr = sum(valuenr)) %>% 
-  ungroup() %>% 
-  ggplot(aes(x = date, y = valuenr)) +
-  geom_line(aes(colour = flow)) +
-  scale_y_continuous(labels = label_comma(scale = 0.000001, prefix = "£", suffix = "m")) +
-  scale_colour_brewer(palette = chart_palette) +
-  theme_minimal() +
-  theme(legend.title = element_blank(),
-        legend.position = c(0.2,0.9),
-        panel.grid.minor = element_blank()) +
-  labs(x = NULL,
-       y = "value",
-       title = "Non response estimated values")
-
-# Non response as proportion of total value bar chart
-nrdiv %>% 
-  # filter(flow == "Exports") %>% 
-  ggplot(aes(x = date, y = value)) + 
-  geom_bar(aes(fill = name), stat = "identity") +
-  facet_grid(row = ~flow) +
-  scale_y_continuous(labels = comma) +
-  scale_fill_discrete(labels = c("reported data", "non response estimate")) +
-  theme_minimal() + 
-  theme(legend.title = element_blank(),
-        legend.position = "bottom",
-        panel.grid.minor = element_blank()) +
-  labs(x = NULL,
-       y = "value",
-       title = "Non response as a proportion of all food and drink")
-
-pcnr <- divs %>% 
-  filter(date >= "2020-12-01",
-         flow == "Imports") %>% 
-  left_join(nonresponse) %>% 
-    left_join(divcodes) %>% 
-  group_by(divdesc, flow, date) %>% 
-  summarise(value = sum(value),
-            valuenr = sum(valuenr)) %>% 
-  mutate(pcnr = percent(valuenr/(value + valuenr), accuracy = 1)) %>% 
-  select(!c(value, valuenr)) %>% 
-    pivot_wider(names_from = date,
-                values_from = pcnr,
-                names_glue = "{format(date, '%b %Y')}") %>% 
-  left_join(divcodes) %>% 
-  arrange(divcode) %>% 
-  select(-flow, -divcode)
-
-totnr <- divs %>% 
-    filter(date >= "2020-12-01",
-         flow == "Imports") %>% 
-  left_join(nonresponse) %>% 
-    group_by(flow, date) %>% 
-  summarise(value = sum(value),
-            valuenr = sum(valuenr)) %>% 
-  mutate(pcnr = percent(valuenr/(value + valuenr), accuracy = 1)) %>% 
-  select(!c(value, valuenr)) %>% 
-    pivot_wider(names_from = date,
-                values_from = pcnr,
-                names_glue = "{format(date, '%b %Y')}")
-
-
-
-
-nonresponse %>% 
-  left_join(divcodes) %>% 
-  filter(date == params$date) %>% 
-  mutate(valuenr = money(valuenr)) %>% 
-  reactable(filterable = TRUE, compact = TRUE)
+    # reactable(filterable = TRUE, compact = TRUE)
+    knitr::kable(caption = "**Year on year change in export values, 2021**")
 
 ```
 
-**Proportion of EU import value estimates attributed to non-response**
-
-`r knitr::kable(totnr)`
-
-`r knitr::kable(pcnr)`
 
 ## Trade by volume
 
@@ -941,3 +782,93 @@ The main assumptions behind this method are:
 
 -   Past indicator data is useful to informing current escalation decisions
 -   The differences of a time series can be used to detect crises related to the original time series. Specifically jumps, kinks, spikes etc... are not distinguished between in difference time series therefore the assumption is that all of these events should be identified by the escalation range.
+
+## Annex: Non response estimates for values
+
+The charts and tables below detail the contribution of non response to overall trade values. Whilst the contribution is generally low, non response estimates for imports have increased markedly since January 2021.
+
+```{r nonresponse, fig.height= 4}
+
+nrdiv <- divs %>% 
+     left_join(nonresponse) %>% 
+      pivot_longer(cols = c(value,valuenr))
+
+# Non repsonse time series line chart
+nonresponse %>% 
+  group_by(flow, date) %>% 
+  summarise(valuenr = sum(valuenr)) %>% 
+  ungroup() %>% 
+  ggplot(aes(x = date, y = valuenr)) +
+  geom_line(aes(colour = flow)) +
+  scale_y_continuous(labels = label_comma(scale = 0.000001, prefix = "£", suffix = "m")) +
+  scale_colour_brewer(palette = chart_palette) +
+  theme_minimal() +
+  theme(legend.title = element_blank(),
+        legend.position = c(0.2,0.9),
+        panel.grid.minor = element_blank()) +
+  labs(x = NULL,
+       y = "value",
+       title = "Non response estimated values")
+
+# Non response as proportion of total value bar chart
+nrdiv %>% 
+  # filter(flow == "Exports") %>% 
+  ggplot(aes(x = date, y = value)) + 
+  geom_bar(aes(fill = name), stat = "identity") +
+  facet_grid(row = ~flow) +
+  scale_y_continuous(labels = comma) +
+  scale_fill_discrete(labels = c("reported data", "non response estimate")) +
+  theme_minimal() + 
+  theme(legend.title = element_blank(),
+        legend.position = "bottom",
+        panel.grid.minor = element_blank()) +
+  labs(x = NULL,
+       y = "value",
+       title = "Non response as a proportion of all food and drink")
+
+pcnr <- divs %>% 
+  filter(date >= "2020-12-01",
+         flow == "Imports") %>% 
+  left_join(nonresponse) %>% 
+    left_join(divcodes) %>% 
+  group_by(divdesc, flow, date) %>% 
+  summarise(value = sum(value),
+            valuenr = sum(valuenr)) %>% 
+  mutate(pcnr = percent(valuenr/(value + valuenr), accuracy = 1)) %>% 
+  select(!c(value, valuenr)) %>% 
+    pivot_wider(names_from = date,
+                values_from = pcnr,
+                names_glue = "{format(date, '%b %Y')}") %>% 
+  left_join(divcodes) %>% 
+  arrange(divcode) %>% 
+  select(-flow, -divcode)
+
+totnr <- divs %>% 
+    filter(date >= "2020-12-01") %>% 
+         # flow == "Imports") %>%
+  left_join(nonresponse) %>% 
+    group_by(flow, date) %>% 
+  summarise(value = sum(value),
+            valuenr = sum(valuenr)) %>% 
+  mutate(pcnr = percent(valuenr/(value + valuenr), accuracy = 0.1,)) %>% 
+  select(!c(value, valuenr)) %>% 
+    pivot_wider(names_from = date,
+                values_from = pcnr,
+                names_glue = "{format(date, '%b %Y')}")
+
+
+
+
+nonresponse %>% 
+  left_join(divcodes) %>% 
+  filter(date == params$date) %>% 
+  mutate(valuenr = money(valuenr)) %>% 
+  reactable(filterable = TRUE, compact = TRUE)
+
+```
+
+**Proportion of EU import value estimates attributed to non-response**
+
+`r knitr::kable(totnr)`
+
+`r knitr::kable(pcnr)`
