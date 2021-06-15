@@ -1,6 +1,8 @@
 library(here)
 library(readr)
 library(dplyr)
+library(lubridate)
+library(stringr)
 
 # filenames
 ffd_archive_file <- "ffd2009-2019.csv"
@@ -25,7 +27,7 @@ ffdarchivecols <- cols(
 )
 
 ffdarchive <- read_csv(here("data", "tidy", ffd_archive_file),
-                       col_types = ffd_latest_file) 
+                       col_types = ffdarchivecols) 
 
 
 # read in the latest file

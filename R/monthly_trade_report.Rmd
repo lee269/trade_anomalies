@@ -1,10 +1,7 @@
 ---
 title: "Trade in food, feed and drink"
 always_allow_html: true
-output:
-  html_document:
-    toc: yes
-    toc_float: yes
+output: word_document
 params:
   date: '2021-04-01'
 ---
@@ -220,7 +217,7 @@ reactable(eupretty,
           )
  
 
-# knitr::kable(eupretty)
+knitr::kable(eupretty)
 ```
 
 ```{r eu_charts, fig.height=4}
@@ -255,6 +252,23 @@ eu %>%
   labs(x = NULL,
        y = NULL,
        title = "Value of trade, EU/Non EU ")
+
+
+eu %>% 
+  filter(date >= "2019-01-01") %>% 
+  mutate(flow = paste(flow,"-",eunoneu)) %>% 
+  ggplot(aes(x = date, y = value)) +
+  geom_line(aes(colour = flow)) +
+    geom_point(aes(colour = flow), size = 0.7) +
+    scale_y_continuous(labels = label_comma(scale = 0.000000001, prefix = "£", suffix = "bn")) +
+  expand_limits(y = 0) +
+  scale_x_date(date_labels = "%Y %b") +
+  scale_colour_brewer(palette = chart_palette) +
+  theme +
+  labs(x = NULL,
+       y = NULL,
+       title = "Value of trade, EU/Non EU ")
+
 
 ```
 
@@ -362,12 +376,12 @@ divyoy %>%
 ```{r}
 
 ffd2020 <- ffd %>% 
-            filter(year >= 2020, flow == "Exports") %>% 
+            filter(year >= 2020, month <=4, flow == "Exports") %>% 
             group_by(year, product) %>% 
             summarise(value = sum(value),
                     tonnes = sum(tonnes),.groups = "drop") %>% 
-            mutate(product = ifelse(year == 2020 & value <= 100000000, "Other", product),
-                   product = ifelse(year == 2021 & value <= 10000000, "Other", product)) %>% 
+            mutate(product = ifelse(year == 2020 & value <= 40000000, "Other", product),
+                   product = ifelse(year == 2021 & value <= 25000000, "Other", product)) %>% 
             group_by(year, product) %>% 
             summarise(value = sum(value),
                     tonnes = sum(tonnes),.groups = "drop")
@@ -384,27 +398,27 @@ light <- "darkolivegreen1"
 
 ggplot() +
   geom_bar(data = ffd2020, aes(x = fct_rev(product), y = value, fill = factor(year)), stat = "identity", position = "dodge") +
-  geom_text(data = filter(ffd2020, year == 2020 & value >= 3000000000),
+  geom_text(data = filter(ffd2020, year == 2021 & value >= 1000000000),
             aes(x = product, y = value, label = paste0("£", comma(value,scale = 0.000001, accuracy = 1), "m")),
             # position = position_stack(vjust = 1),
             hjust = 1,
             nudge_y = 0,
             size = 3,
             colour = "gray60") +
-    geom_text(data = filter(ffd2020, year == 2020 & value <= 3000000000),
+    geom_text(data = filter(ffd2020, year == 2021 & value <= 1000000000 & product != "Other"),
             aes(x = product, y = value, label = paste0("£", comma(value,scale = 0.000001, accuracy = 1), "m")),
             # position = position_stack(vjust = 1),
-            hjust = -0.1,
+            hjust = -0.5,
             nudge_y = 0,
             size = 3,
             colour = "gray60") +
-  # scale_fill_manual(values = c(dark, light)) +
+  scale_fill_manual(values = c(dark, light)) +
   scale_fill_brewer(palette = chart_palette) +
   scale_y_continuous(labels = label_comma(scale = 0.000001, prefix = "£", suffix = "m")) +
   coord_flip() +
   labs(x = NULL,
        y = NULL,
-       title = "Export values, 2020 and year to date 2021") +
+       title = "Export values, Jan - Apr cumulative") +
   theme_minimal() +
   theme(panel.grid.major.y = element_blank(),
         panel.grid.minor.x = element_blank(),
@@ -527,6 +541,7 @@ valdiffs %>%
   filter(date >= "2021-01-01", flow == "Exports", euirl != "RoW") %>% 
   ggplot(aes(x = date, y = valuediff)) +
   geom_bar(aes(fill = euirl), stat = "identity") +
+  geom_hline(yintercept = 0, size = 0.2, colour = "gray50") +
   facet_wrap(~divdesc, labeller = label_wrap_gen()) +
   scale_y_continuous(labels = label_comma(scale = 0.000001, prefix = "£", suffix = "m")) +
   scale_fill_brewer(palette = chart_palette, direction = -1) +
@@ -543,11 +558,28 @@ valdiffs %>%
 valdiffs %>% 
     filter(date >= "2021-01-01", flow == "Exports", euirl != "RoW") %>% 
     # select(!c(value, diff)) %>% 
-    mutate(valuediff = money(valuediff)) %>% 
+    mutate(valuediff = comma(valuediff, scale = 0.000001, accuracy = 0.1, prefix = "£", suffix = "m")) %>% 
     pivot_wider(names_from = date, values_from = valuediff, id_cols = c(flow, euirl, divdesc), names_glue = "{format(date, '%b %Y')}") %>% 
     arrange(divdesc, euirl) %>%   
     # reactable(filterable = TRUE, compact = TRUE)
     knitr::kable(caption = "**Year on year change in export values, 2021**")
+
+valdiffs %>% 
+    filter(date >= "2021-01-01", flow == "Exports", euirl != "RoW") %>% 
+    # select(!c(value, diff)) %>% 
+    mutate(valuediff = comma(valuediff, scale = 0.000001, accuracy = 0.1, prefix = "£", suffix = "m"),
+           pc = percent((value/diff)-1, accuracy = 0.1)) %>% 
+    pivot_wider(names_from = date, values_from = pc, id_cols = c(flow, euirl, divdesc), names_glue = "{format(date, '%b %Y')}") %>% 
+    arrange(divdesc, euirl) %>%   
+    # reactable(filterable = TRUE, compact = TRUE)
+    knitr::kable(caption = "**Year on year change in export values, 2021**")
+
+# valdiffs %>% 
+#     filter(date >= "2021-01-01", flow == "Exports", euirl != "RoW") %>% 
+#     # select(!c(value, diff)) %>% 
+#     mutate(valuediff = comma(valuediff, scale = 0.000001, accuracy = 0.1, prefix = "£", suffix = "m"),
+#            pc = percent((value/diff)-1, accuracy = 0.1)) %>% 
+#   knitr::kable()
 
 ```
 
